@@ -1,0 +1,99 @@
+{
+  "name": "AI-Driven Incident Response & Alert Triage Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "alert-ingestion",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-380, -200],
+      "id": "node-webhook-trigger",
+      "name": "Alert Webhook Receiver",
+      "webhookId": "alert-ingestion-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Payload Normalizer & Deduplication Fingerprinting\nconst crypto = require('crypto');\nconst input = $json.body || $json;\n\nlet alerts = [];\nif (input.alerts && Array.isArray(input.alerts)) {\n  // Prometheus format\n  alerts = input.alerts.map(a => ({\n    source: 'prometheus',\n    alert_name: a.labels?.alertname || a.annotations?.summary || 'Prometheus Alert',\n    description: a.annotations?.description || a.annotations?.message || JSON.stringify(a),\n    severity: a.labels?.severity || 'Medium',\n    service: a.labels?.job || a.labels?.service || 'infrastructure',\n    instance: a.labels?.instance || 'unknown',\n    raw_payload: a\n  }));\n} else {\n  // Custom / Grafana format\n  alerts = [{\n    source: input.source || 'custom',\n    alert_name: input.alert_name || input.ruleName || input.title || 'IT Alert',\n    description: input.description || input.message || JSON.stringify(input),\n    severity: input.severity || 'Medium',\n    service: input.service || 'service',\n    instance: input.instance || 'host',\n    raw_payload: input\n  }];\n}\n\nreturn alerts.map(a => {\n  const rawKey = `${a.source}::${a.alert_name}::${a.service}::${a.instance}`.toLowerCase();\n  const fingerprint = crypto.createHash('sha256').update(rawKey).digest('hex');\n  return { json: { ...a, fingerprint } };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-160, -200],
+      "id": "node-normalizer-code",
+      "name": "Normalizer & Fingerprinter"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:8000/webhook/alerts",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [80, -200],
+      "id": "node-triage-api-caller",
+      "name": "Gemini AI Triage Engine"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, title, severity, status, created_at FROM incidents WHERE id = $1;",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [320, -200],
+      "id": "node-postgres-fetch",
+      "name": "Fetch Created Incident",
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres-credentials",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Alert Webhook Receiver": {
+      "main": [
+        [
+          {
+            "node": "Normalizer & Fingerprinter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizer & Fingerprinter": {
+      "main": [
+        [
+          {
+            "node": "Gemini AI Triage Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini AI Triage Engine": {
+      "main": [
+        [
+          {
+            "node": "Fetch Created Incident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
