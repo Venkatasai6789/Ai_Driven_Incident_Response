@@ -165,7 +165,7 @@ class RemediationController:
                 "telegram_dispatched": tg_result.get("sent", False),
             }
 
-    def execute_approved_action(self, action_id: str, dry_run: Optional[bool] = None) -> ExecutionReceipt:
+    def execute_approved_action(self, action_id: str, dry_run: Optional[bool] = False) -> ExecutionReceipt:
         """Execute an action that has been approved via Telegram callback."""
         conn = self.get_connection()
         cur = conn.cursor()
@@ -189,14 +189,26 @@ class RemediationController:
         if status != "approved":
             raise ValueError(f"Action '{action_id}' cannot be executed with status '{status}' (must be 'approved').")
 
+        real_dry_run = False if dry_run is None else dry_run
         receipt = self.runner.execute_action(
             action_id=action_id,
             incident_id=incident_id,
             command=command,
             command_type=cmd_type,
             approval_status="approved",
-            dry_run=dry_run,
+            dry_run=real_dry_run,
         )
+
+        # Mark incident as resolved in PostgreSQL
+        conn_res = self.get_connection()
+        cur_res = conn_res.cursor()
+        cur_res.execute(
+            "UPDATE incidents SET status = 'resolved', resolved_at = NOW() WHERE id = %s;",
+            (incident_id,)
+        )
+        conn_res.commit()
+        cur_res.close()
+        conn_res.close()
 
         # Dispatch execution receipt to Telegram
         self.telegram_gate.send_execution_receipt(
@@ -207,5 +219,31 @@ class RemediationController:
             stderr=receipt.stderr,
             duration_ms=receipt.duration_ms,
         )
+
+        # Asynchronously broadcast state update to frontend WebSocket clients
+        try:
+            from src.triage.events_ws import ws_manager
+            import asyncio
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(ws_manager.broadcast({
+                    "type": "INCIDENT_RESOLVED",
+                    "incident_id": incident_id,
+                    "action_id": action_id,
+                    "command": command,
+                    "exit_code": receipt.exit_code,
+                    "status": "resolved",
+                }))
+            except RuntimeError:
+                asyncio.run(ws_manager.broadcast({
+                    "type": "INCIDENT_RESOLVED",
+                    "incident_id": incident_id,
+                    "action_id": action_id,
+                    "command": command,
+                    "exit_code": receipt.exit_code,
+                    "status": "resolved",
+                }))
+        except Exception:
+            pass
 
         return receipt

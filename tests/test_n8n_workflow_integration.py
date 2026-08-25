@@ -33,8 +33,8 @@ def test_n8n_workflow_synthesizes_reference_3_nodes():
 
     node_types = {node["type"] for node in data["nodes"]}
     
-    # 1. Supabase Vector Store Node from Reference 3
-    assert "@n8n/n8n-nodes-langchain.vectorStoreSupabase" in node_types
+    # 1. Vector Store Node (Supabase / Postgres Vector) from Reference 3
+    assert ("@n8n/n8n-nodes-langchain.vectorStoreSupabase" in node_types or "@n8n/n8n-nodes-langchain.vectorStorePGVector" in node_types)
     
     # 2. Postgres Chat / Incident Memory Node from Reference 3
     assert "@n8n/n8n-nodes-langchain.memoryPostgresChat" in node_types

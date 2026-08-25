@@ -153,9 +153,34 @@ class TelegramPollingBot:
             # 3. If approved, execute command and dispatch execution receipt!
             if success and acted_id and decision == "approve":
                 print(f"[*] Executing approved remediation command for Action {acted_id}...", flush=True)
-                receipt = self.controller.execute_approved_action(acted_id, dry_run=True)
+                receipt = self.controller.execute_approved_action(acted_id, dry_run=False)
+                safe_stdout = (receipt.stdout or "").encode('ascii', errors='replace').decode('ascii')
                 print(f"[OK] Execution Finished: Code={receipt.exit_code}, Duration={receipt.duration_ms}ms", flush=True)
-                print(f"     Output: {receipt.stdout}", flush=True)
+                print(f"     Output: {safe_stdout}", flush=True)
+
+            # 4. If rejected, broadcast rejection state to frontend & log escalation
+            elif success and acted_id and decision == "reject":
+                print(f"[!] Remediation Action {acted_id} was REJECTED by @{user_name}.", flush=True)
+                try:
+                    from src.triage.events_ws import ws_manager
+                    import asyncio
+                    try:
+                        loop = asyncio.get_running_loop()
+                        loop.create_task(ws_manager.broadcast({
+                            "type": "INCIDENT_REJECTED",
+                            "action_id": acted_id,
+                            "user_name": user_name,
+                            "status": "rejected",
+                        }))
+                    except RuntimeError:
+                        asyncio.run(ws_manager.broadcast({
+                            "type": "INCIDENT_REJECTED",
+                            "action_id": acted_id,
+                            "user_name": user_name,
+                            "status": "rejected",
+                        }))
+                except Exception:
+                    pass
 
         # 2. Handle standard chat messages
         elif "message" in update:
