@@ -1,0 +1,6 @@
+{
+  "name": "AURORA SRE",
+  "description": "Autonomous AI SRE First-Responder Control Plane dashboard with live topology, automated incident triage, safety pipeline, chaos engineering simulation, and post-mortem reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
