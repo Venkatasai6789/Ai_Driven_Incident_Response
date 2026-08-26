@@ -387,7 +387,8 @@ export default function App() {
               <SystemTopology
                 activeIncident={activeIncident}
                 topologyData={topologyData || undefined}
-                isLoading={isLoadingInitial || isLoadingIncident}
+                isLoading={isLoadingInitial}
+                currentStep={activeIncident?.currentStepIndex ?? 0}
                 onInvestigate={() => setIsDrawerOpen(true)}
               />
             </div>

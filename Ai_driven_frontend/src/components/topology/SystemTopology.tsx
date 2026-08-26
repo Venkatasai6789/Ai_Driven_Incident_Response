@@ -12,6 +12,7 @@ import {
   Server,
   ShieldCheck,
   Send,
+  Check,
 } from 'lucide-react';
 import type { SystemTopologyProps } from '../../types';
 
@@ -20,7 +21,7 @@ interface MeshNode {
   name: string;
   shortName: string;
   iconType: 'gateway' | 'service' | 'database' | 'webhook' | 'ai' | 'guardrail' | 'telegram';
-  status: 'NOMINAL' | 'DEGRADED' | 'CRITICAL' | 'ACTIVE';
+  status: 'NOMINAL' | 'DEGRADED' | 'CRITICAL' | 'ACTIVE' | 'SUCCESS';
   latency: number;
   protocol: string;
   throughput: string;
@@ -29,6 +30,7 @@ interface MeshNode {
   errorRate: string;
   namespace: string;
   subTag: string;
+  isCompleted: boolean;
   leftPercent: string;
   topPx: number;
   widthPercent: string;
@@ -44,10 +46,40 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
 }) => {
   const [selectedNodeId, setSelectedNodeId] = useState<string>('checkout-service');
 
-  const isNominal = !activeIncident || activeIncident.status === 'RESOLVED';
-  const incidentService = !isNominal ? activeIncident?.impactedService || 'checkout-service' : null;
+  const isNominal =
+    !activeIncident ||
+    activeIncident.status === 'RESOLVED' ||
+    activeIncident.status === 'CLOSED' ||
+    activeIncident.incidentId === 'nominal' ||
+    activeIncident.incidentId === 'INC-NOMINAL-000';
 
-  // 7 Application Architecture Nodes with responsive percentage positioning
+  const incidentService = !isNominal ? activeIncident?.impactedService || 'checkout-service' : null;
+  const stepIdx = isNominal ? 5 : (activeIncident?.currentStepIndex ?? currentStep ?? 0);
+
+  // Determine dynamic node lifecycle states (n8n-style progression)
+  // Step 0: Ingesting Alert
+  // Step 1: Gemini RAG Vector Search & SOP Match
+  // Step 2: AST Guardrail Policy Validation
+  // Step 3: Telegram SRE Commander Push Notification
+  // Step 4: Remediation Execution in Cluster
+  // Step 5: Verification & All-Green Resolution
+
+  const isAlertActive = !isNominal && stepIdx === 0;
+  const isAlertDone = !isNominal && stepIdx > 0;
+
+  const isRagActive = !isNominal && stepIdx === 1;
+  const isRagDone = !isNominal && stepIdx > 1;
+
+  const isGuardrailActive = !isNominal && stepIdx === 2;
+  const isGuardrailDone = !isNominal && stepIdx > 2;
+
+  const isTelegramActive = !isNominal && stepIdx === 3;
+  const isTelegramDone = !isNominal && stepIdx > 3;
+
+  const isRemediating = !isNominal && stepIdx === 4;
+  const isAllResolved = isNominal || stepIdx >= 5;
+
+  // 7 Application Architecture Nodes
   const nodes: MeshNode[] = [
     // Top Row: Workload Layer (3 Nodes)
     {
@@ -63,7 +95,8 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '99.99%',
       errorRate: '0.00%',
       namespace: 'ingress',
-      subTag: 'Nominal (4ms)',
+      subTag: 'Nominal · 4ms',
+      isCompleted: isAllResolved,
       leftPercent: '2%',
       topPx: 16,
       widthPercent: '28%',
@@ -74,7 +107,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       name: 'Checkout Service (Node.js)',
       shortName: 'checkout-service',
       iconType: 'service',
-      status: isNominal
+      status: isAllResolved
         ? 'NOMINAL'
         : incidentService === 'checkout-service'
         ? activeIncident?.severity === 'CRITICAL'
@@ -83,14 +116,21 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
         : incidentService === 'postgresql'
         ? 'DEGRADED'
         : 'NOMINAL',
-      latency: isNominal ? 18 : incidentService === 'checkout-service' ? 2840 : 450,
+      latency: isAllResolved ? 18 : incidentService === 'checkout-service' ? 2840 : 450,
       protocol: 'gRPC / HTTP 2',
-      throughput: isNominal ? '3,210 rps' : '140 rps',
-      baseResource: isNominal ? '42% CPU' : incidentService === 'checkout-service' ? '98% Memory' : '65% CPU',
-      baseUptime: isNominal ? '99.95%' : '84.2%',
-      errorRate: isNominal ? '0.00%' : incidentService === 'checkout-service' ? '38.4%' : '8.5%',
+      throughput: isAllResolved ? '3,210 rps' : '140 rps',
+      baseResource: isAllResolved ? '42% CPU' : incidentService === 'checkout-service' ? '98% Memory' : '65% CPU',
+      baseUptime: isAllResolved ? '99.95%' : '84.2%',
+      errorRate: isAllResolved ? '0.00%' : incidentService === 'checkout-service' ? '38.4%' : '8.5%',
       namespace: 'workloads',
-      subTag: isNominal ? 'Nominal (18ms)' : incidentService === 'checkout-service' ? 'CRITICAL · 2840ms' : 'DEGRADED · 450ms',
+      subTag: isAllResolved
+        ? 'Nominal · 18ms'
+        : isRemediating
+        ? 'Restarting Pod...'
+        : incidentService === 'checkout-service'
+        ? 'CRITICAL · 2840ms'
+        : 'DEGRADED · 450ms',
+      isCompleted: isAllResolved,
       leftPercent: '36%',
       topPx: 16,
       widthPercent: '28%',
@@ -101,21 +141,26 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       name: 'PostgreSQL DB (Aurora)',
       shortName: 'postgresql-primary',
       iconType: 'database',
-      status: isNominal
+      status: isAllResolved
         ? 'NOMINAL'
         : incidentService === 'postgresql'
         ? 'CRITICAL'
         : incidentService === 'checkout-service'
         ? 'DEGRADED'
         : 'NOMINAL',
-      latency: isNominal ? 6 : incidentService === 'postgresql' ? 142 : 28,
+      latency: isAllResolved ? 6 : incidentService === 'postgresql' ? 142 : 28,
       protocol: 'TCP / PgBouncer',
       throughput: '1,850 qps',
-      baseResource: isNominal ? '31% CPU' : incidentService === 'postgresql' ? '94% CPU' : '45% CPU',
+      baseResource: isAllResolved ? '31% CPU' : incidentService === 'postgresql' ? '94% CPU' : '45% CPU',
       baseUptime: '99.99%',
-      errorRate: isNominal ? '0.00%' : incidentService === 'postgresql' ? '14.2%' : '0.00%',
+      errorRate: isAllResolved ? '0.00%' : incidentService === 'postgresql' ? '14.2%' : '0.00%',
       namespace: 'database',
-      subTag: isNominal ? 'Nominal (6ms)' : incidentService === 'postgresql' ? 'CRITICAL · 142ms' : 'DEGRADED · 28ms',
+      subTag: isAllResolved
+        ? 'Nominal · 6ms'
+        : incidentService === 'postgresql'
+        ? 'CRITICAL · 142ms'
+        : 'DEGRADED · 28ms',
+      isCompleted: isAllResolved,
       leftPercent: '70%',
       topPx: 16,
       widthPercent: '28%',
@@ -128,7 +173,13 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       name: 'Alert Ingest (Prometheus)',
       shortName: 'alert-webhook',
       iconType: 'webhook',
-      status: !isNominal ? 'ACTIVE' : 'NOMINAL',
+      status: isAllResolved
+        ? 'NOMINAL'
+        : isAlertDone
+        ? 'SUCCESS'
+        : isAlertActive
+        ? 'ACTIVE'
+        : 'NOMINAL',
       latency: 8,
       protocol: 'eBPF / Webhook',
       throughput: '450 evt/s',
@@ -136,7 +187,12 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'telemetry',
-      subTag: !isNominal ? 'Ingesting Stream' : 'Listening',
+      subTag: isAllResolved
+        ? 'Listening (Nominal)'
+        : isAlertDone
+        ? 'eBPF Ingested'
+        : 'Ingesting Stream...',
+      isCompleted: isAlertDone || isAllResolved,
       leftPercent: '2%',
       topPx: 142,
       widthPercent: '22%',
@@ -147,7 +203,13 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       name: 'Gemini RAG Agent',
       shortName: 'rag-ai-agent',
       iconType: 'ai',
-      status: !isNominal ? 'ACTIVE' : 'NOMINAL',
+      status: isAllResolved
+        ? 'NOMINAL'
+        : isRagDone
+        ? 'SUCCESS'
+        : isRagActive
+        ? 'ACTIVE'
+        : 'NOMINAL',
       latency: 38,
       protocol: 'pgvector / Gemini 2.5',
       throughput: 'Vector Search',
@@ -155,7 +217,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'ai-core',
-      subTag: !isNominal ? 'pgvector RAG Live' : 'Standby SOPs',
+      subTag: isAllResolved
+        ? 'Standby SOPs'
+        : isRagDone
+        ? 'SOP Matched (99.4%)'
+        : isRagActive
+        ? 'Embedding & Matching...'
+        : 'Standby SOPs',
+      isCompleted: isRagDone || isAllResolved,
       leftPercent: '26.5%',
       topPx: 142,
       widthPercent: '22%',
@@ -166,7 +235,13 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       name: 'Safety Guardrail (AST)',
       shortName: 'fastapi-dispatcher',
       iconType: 'guardrail',
-      status: !isNominal ? 'ACTIVE' : 'NOMINAL',
+      status: isAllResolved
+        ? 'NOMINAL'
+        : isGuardrailDone
+        ? 'SUCCESS'
+        : isGuardrailActive
+        ? 'ACTIVE'
+        : 'NOMINAL',
       latency: 12,
       protocol: 'Python AST / Policy',
       throughput: 'Deterministic',
@@ -174,7 +249,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'automation',
-      subTag: !isNominal ? 'AST Verified (0 Blast)' : 'Enforced',
+      subTag: isAllResolved
+        ? 'Policy Armed'
+        : isGuardrailDone
+        ? 'AST Passed (0 Blast)'
+        : isGuardrailActive
+        ? 'Verifying AST Policy...'
+        : 'Policy Armed',
+      isCompleted: isGuardrailDone || isAllResolved,
       leftPercent: '51%',
       topPx: 142,
       widthPercent: '22%',
@@ -185,7 +267,13 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       name: 'Telegram SRE Commander',
       shortName: 'telegram-notifier',
       iconType: 'telegram',
-      status: !isNominal ? 'ACTIVE' : 'NOMINAL',
+      status: isAllResolved
+        ? 'NOMINAL'
+        : isTelegramDone
+        ? 'SUCCESS'
+        : isTelegramActive
+        ? 'ACTIVE'
+        : 'NOMINAL',
       latency: 45,
       protocol: 'MTProto / Webhook',
       throughput: '@AuroraSREBot',
@@ -193,7 +281,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'channels',
-      subTag: !isNominal ? 'Alert Dispatched' : '@AuroraSREBot',
+      subTag: isAllResolved
+        ? '@AuroraSREBot Ready'
+        : isTelegramDone
+        ? 'Push Delivered (@AuroraSREBot)'
+        : isTelegramActive
+        ? 'Dispatching 2FA Alert...'
+        : '@AuroraSREBot Ready',
+      isCompleted: isTelegramDone || isAllResolved,
       leftPercent: '75.5%',
       topPx: 142,
       widthPercent: '22.5%',
@@ -218,10 +313,12 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
   const pathGuardrailToTelegram = 'M 730 183 L 755 183';
   const pathGuardrailToCheckout = 'M 620 142 C 620 120, 560 120, 560 98';
 
-  const renderIcon = (type: string, isCrit: boolean, isAct: boolean) => {
+  const renderIcon = (type: string, isCrit: boolean, isAct: boolean, isSuccess: boolean) => {
     const iconClass = `w-4 h-4 ${
       isCrit
         ? 'text-rose-500'
+        : isSuccess
+        ? 'text-emerald-500'
         : isAct
         ? 'text-indigo-500'
         : 'text-emerald-600 dark:text-emerald-400'
@@ -234,13 +331,13 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       case 'database':
         return <Database className={iconClass} />;
       case 'webhook':
-        return <Activity className={iconClass} />;
+        return isSuccess ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Activity className={iconClass} />;
       case 'ai':
-        return <Zap className={iconClass} />;
+        return isSuccess ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Zap className={iconClass} />;
       case 'guardrail':
-        return <ShieldCheck className={iconClass} />;
+        return isSuccess ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <ShieldCheck className={iconClass} />;
       case 'telegram':
-        return <Send className="w-4 h-4 text-sky-500" />;
+        return isSuccess ? <CheckCircle className="w-4 h-4 text-emerald-500" /> : <Send className="w-4 h-4 text-sky-500" />;
       default:
         return <Server className={iconClass} />;
     }
@@ -270,21 +367,21 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {!isNominal ? (
+          {!isAllResolved ? (
             <span className="px-3 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-mono font-bold flex items-center gap-1.5 animate-pulse shadow-xs">
               <Flame className="w-3.5 h-3.5 text-rose-500" />
-              <span>Incident Alert Active ({incidentService || 'workloads'})</span>
+              <span>Incident Propagation Active ({incidentService || 'workloads'})</span>
             </span>
           ) : (
             <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs">
               <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Mesh 100% Nominal</span>
+              <span>Mesh 100% Nominal · All Nodes Green</span>
             </span>
           )}
         </div>
       </div>
 
-      {/* 2. Interactive Responsive Topology Canvas */}
+      {/* 2. Interactive Responsive Topology Canvas with n8n-Style Execution Flow */}
       <div className="relative w-full h-[245px] bg-[#F8FAFC]/90 dark:bg-[#070A10]/90 rounded-xl border border-slate-200/60 dark:border-white/[0.04] overflow-hidden">
         {isLoading ? (
           <div className="w-full h-full flex flex-col justify-between p-4">
@@ -357,17 +454,17 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathGwToCheckout}
                 fill="none"
-                stroke={incidentService === 'checkout-service' ? 'url(#laserCritical)' : 'url(#laserNominal)'}
+                stroke={incidentService === 'checkout-service' && !isAllResolved ? 'url(#laserCritical)' : 'url(#laserNominal)'}
                 strokeWidth="2.5"
                 strokeDasharray="5 5"
                 className="animate-laser-flow"
                 filter="url(#glowEffect)"
               />
-              <circle r="3.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#10B981'}>
+              <circle r="3.5" fill={incidentService === 'checkout-service' && !isAllResolved ? '#EF4444' : '#10B981'}>
                 <animateMotion dur="1.2s" repeatCount="indefinite" path={pathGwToCheckout} />
               </circle>
-              <circle cx="300" cy="57" r="2.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#10B981'} />
-              <circle cx="360" cy="57" r="2.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#10B981'} />
+              <circle cx="300" cy="57" r="2.5" fill={incidentService === 'checkout-service' && !isAllResolved ? '#EF4444' : '#10B981'} />
+              <circle cx="360" cy="57" r="2.5" fill={incidentService === 'checkout-service' && !isAllResolved ? '#EF4444' : '#10B981'} />
 
               {/* 2. Checkout -> PostgreSQL */}
               <path
@@ -381,17 +478,17 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathCheckoutToDb}
                 fill="none"
-                stroke={incidentService === 'postgresql' ? 'url(#laserCritical)' : 'url(#laserNominal)'}
+                stroke={incidentService === 'postgresql' && !isAllResolved ? 'url(#laserCritical)' : 'url(#laserNominal)'}
                 strokeWidth="2.5"
                 strokeDasharray="5 5"
                 className="animate-laser-flow"
                 filter="url(#glowEffect)"
               />
-              <circle r="3.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'}>
+              <circle r="3.5" fill={incidentService === 'postgresql' && !isAllResolved ? '#EF4444' : '#10B981'}>
                 <animateMotion dur="1.4s" repeatCount="indefinite" path={pathCheckoutToDb} />
               </circle>
-              <circle cx="640" cy="57" r="2.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'} />
-              <circle cx="700" cy="57" r="2.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'} />
+              <circle cx="640" cy="57" r="2.5" fill={incidentService === 'postgresql' && !isAllResolved ? '#EF4444' : '#10B981'} />
+              <circle cx="700" cy="57" r="2.5" fill={incidentService === 'postgresql' && !isAllResolved ? '#EF4444' : '#10B981'} />
 
               {/* 3. Incident Telemetry Conduit: Checkout or Postgres -> Alert Webhook */}
               <path
@@ -402,7 +499,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                 strokeDasharray="4 4"
                 className="dark:stroke-zinc-800"
               />
-              {!isNominal && (
+              {!isAllResolved && (
                 <>
                   <path
                     d={incidentService === 'postgresql' ? pathDbToAlert : pathCheckoutToAlert}
@@ -421,8 +518,8 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                   </circle>
                 </>
               )}
-              <circle cx={incidentService === 'postgresql' ? '840' : '500'} cy="98" r="3.5" fill={!isNominal ? '#EF4444' : '#94A3B8'} />
-              <circle cx="130" cy="142" r="3.5" fill={!isNominal ? '#EF4444' : '#94A3B8'} />
+              <circle cx={incidentService === 'postgresql' ? '840' : '500'} cy="98" r="3.5" fill={!isAllResolved ? '#EF4444' : '#10B981'} />
+              <circle cx="130" cy="142" r="3.5" fill={!isAllResolved ? '#EF4444' : '#10B981'} />
 
               {/* 4. Alert Ingest -> Gemini RAG Agent (Live SOP Vector Search Flow) */}
               <path
@@ -435,22 +532,23 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathAlertToRag}
                 fill="none"
-                stroke={!isNominal ? 'url(#laserAI)' : 'url(#laserNominal)'}
-                strokeWidth={!isNominal ? '3.5' : '2'}
+                stroke={isRagActive ? 'url(#laserAI)' : isRagDone || isAllResolved ? 'url(#laserNominal)' : '#CBD5E1'}
+                strokeWidth={isRagActive ? '4' : '2.5'}
                 strokeDasharray="5 5"
                 className="animate-laser-flow"
-                filter={!isNominal ? 'url(#glowEffect)' : undefined}
+                filter={isRagActive ? 'url(#glowEffect)' : undefined}
               />
-              <circle r={!isNominal ? '4.5' : '3'} fill={!isNominal ? '#8B5CF6' : '#10B981'}>
-                <animateMotion dur={!isNominal ? '0.75s' : '1.8s'} repeatCount="indefinite" path={pathAlertToRag} />
+              {/* Particle flow along Alert -> RAG */}
+              <circle r={isRagActive ? '5' : '3'} fill={isRagActive ? '#8B5CF6' : '#10B981'}>
+                <animateMotion dur={isRagActive ? '0.65s' : '1.8s'} repeatCount="indefinite" path={pathAlertToRag} />
               </circle>
-              {!isNominal && (
-                <circle r="3" fill="#C084FC">
-                  <animateMotion dur="0.75s" begin="0.37s" repeatCount="indefinite" path={pathAlertToRag} />
+              {isRagActive && (
+                <circle r="3.5" fill="#C084FC">
+                  <animateMotion dur="0.65s" begin="0.32s" repeatCount="indefinite" path={pathAlertToRag} />
                 </circle>
               )}
-              <circle cx="240" cy="183" r="3" fill={!isNominal ? '#8B5CF6' : '#10B981'} />
-              <circle cx="265" cy="183" r="3" fill={!isNominal ? '#8B5CF6' : '#10B981'} />
+              <circle cx="240" cy="183" r="3" fill={isRagActive ? '#8B5CF6' : '#10B981'} />
+              <circle cx="265" cy="183" r="3" fill={isRagActive ? '#8B5CF6' : '#10B981'} />
 
               {/* 5. Gemini RAG Agent -> Safety Guardrail (AST Verification Flow) */}
               <path
@@ -463,22 +561,22 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathRagToGuardrail}
                 fill="none"
-                stroke={!isNominal ? 'url(#laserGuardrail)' : 'url(#laserNominal)'}
-                strokeWidth={!isNominal ? '3.5' : '2'}
+                stroke={isGuardrailActive ? 'url(#laserGuardrail)' : isGuardrailDone || isAllResolved ? 'url(#laserNominal)' : '#CBD5E1'}
+                strokeWidth={isGuardrailActive ? '4' : '2.5'}
                 strokeDasharray="5 5"
                 className="animate-laser-flow"
-                filter={!isNominal ? 'url(#glowEffect)' : undefined}
+                filter={isGuardrailActive ? 'url(#glowEffect)' : undefined}
               />
-              <circle r={!isNominal ? '4.5' : '3'} fill="#10B981">
-                <animateMotion dur={!isNominal ? '0.75s' : '1.8s'} repeatCount="indefinite" path={pathRagToGuardrail} />
+              <circle r={isGuardrailActive ? '5' : '3'} fill="#10B981">
+                <animateMotion dur={isGuardrailActive ? '0.65s' : '1.8s'} repeatCount="indefinite" path={pathRagToGuardrail} />
               </circle>
-              {!isNominal && (
-                <circle r="3" fill="#6EE7B7">
-                  <animateMotion dur="0.75s" begin="0.37s" repeatCount="indefinite" path={pathRagToGuardrail} />
+              {isGuardrailActive && (
+                <circle r="3.5" fill="#6EE7B7">
+                  <animateMotion dur="0.65s" begin="0.32s" repeatCount="indefinite" path={pathRagToGuardrail} />
                 </circle>
               )}
-              <circle cx="485" cy="183" r="3" fill={!isNominal ? '#10B981' : '#10B981'} />
-              <circle cx="510" cy="183" r="3" fill={!isNominal ? '#10B981' : '#10B981'} />
+              <circle cx="485" cy="183" r="3" fill={isGuardrailActive ? '#8B5CF6' : '#10B981'} />
+              <circle cx="510" cy="183" r="3" fill="#10B981" />
 
               {/* 6. Safety Guardrail -> Telegram Notifier (@AuroraSREBot Alert Push) */}
               <path
@@ -491,25 +589,25 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathGuardrailToTelegram}
                 fill="none"
-                stroke={!isNominal ? 'url(#laserTelegram)' : 'url(#laserNominal)'}
-                strokeWidth={!isNominal ? '4' : '2'}
+                stroke={isTelegramActive ? 'url(#laserTelegram)' : isTelegramDone || isAllResolved ? 'url(#laserNominal)' : '#CBD5E1'}
+                strokeWidth={isTelegramActive ? '4' : '2.5'}
                 strokeDasharray="5 5"
                 className="animate-laser-flow"
-                filter={!isNominal ? 'url(#glowEffect)' : undefined}
+                filter={isTelegramActive ? 'url(#glowEffect)' : undefined}
               />
-              <circle r={!isNominal ? '5' : '3'} fill={!isNominal ? '#0EA5E9' : '#10B981'}>
-                <animateMotion dur={!isNominal ? '0.65s' : '1.8s'} repeatCount="indefinite" path={pathGuardrailToTelegram} />
+              <circle r={isTelegramActive ? '5' : '3'} fill={isTelegramActive ? '#0EA5E9' : '#10B981'}>
+                <animateMotion dur={isTelegramActive ? '0.6s' : '1.8s'} repeatCount="indefinite" path={pathGuardrailToTelegram} />
               </circle>
-              {!isNominal && (
+              {isTelegramActive && (
                 <circle r="3.5" fill="#7DD3FC">
-                  <animateMotion dur="0.65s" begin="0.32s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
+                  <animateMotion dur="0.6s" begin="0.3s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
                 </circle>
               )}
-              <circle cx="730" cy="183" r="3.5" fill={!isNominal ? '#0EA5E9' : '#10B981'} />
-              <circle cx="755" cy="183" r="3.5" fill={!isNominal ? '#0EA5E9' : '#10B981'} />
+              <circle cx="730" cy="183" r="3.5" fill={isTelegramActive ? '#0EA5E9' : '#10B981'} />
+              <circle cx="755" cy="183" r="3.5" fill={isTelegramActive ? '#0EA5E9' : '#10B981'} />
 
               {/* 7. Remediation Feedback Loop: Safety Guardrail -> Checkout Service */}
-              {currentStep >= 4 && (
+              {(isRemediating || isAllResolved) && (
                 <>
                   <path
                     d={pathGuardrailToCheckout}
@@ -534,6 +632,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                 const isCrit = node.status === 'CRITICAL';
                 const isDeg = node.status === 'DEGRADED';
                 const isAct = node.status === 'ACTIVE';
+                const isSuccess = node.status === 'SUCCESS';
 
                 return (
                   <motion.div
@@ -546,11 +645,13 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                       width: node.widthPercent,
                       height: `${node.heightPx}px`,
                     }}
-                    className={`absolute rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all duration-200 ${
+                    className={`absolute rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all duration-300 ${
                       isCrit
                         ? 'bg-white dark:bg-[#12080C] border-2 border-rose-500 shadow-[0_0_22px_rgba(244,63,94,0.45)] ring-2 ring-rose-400/40'
                         : isDeg
                         ? 'bg-white dark:bg-[#120D08] border-2 border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.35)]'
+                        : isSuccess
+                        ? 'bg-white dark:bg-[#07120D] border-2 border-emerald-500 shadow-[0_0_18px_rgba(16,185,129,0.35)] ring-2 ring-emerald-400/30'
                         : isAct && node.id === 'telegram-notifier'
                         ? 'bg-white dark:bg-[#080E14] border-2 border-sky-500 shadow-[0_0_24px_rgba(14,165,233,0.45)] ring-2 ring-sky-400/50'
                         : isAct && node.id === 'rag-ai-agent'
@@ -569,6 +670,8 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                           className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 relative ${
                             isCrit
                               ? 'bg-rose-100 dark:bg-rose-950/80'
+                              : isSuccess
+                              ? 'bg-emerald-100 dark:bg-emerald-950/80'
                               : isAct && node.id === 'telegram-notifier'
                               ? 'bg-sky-100 dark:bg-sky-950/80'
                               : isAct && node.id === 'rag-ai-agent'
@@ -578,12 +681,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                               : 'bg-emerald-50 dark:bg-emerald-950/60'
                           }`}
                         >
-                          {renderIcon(node.iconType, isCrit, isAct)}
-                          {isAct && node.id === 'telegram-notifier' && (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-sky-500 rounded-full animate-ping" />
+                          {renderIcon(node.iconType, isCrit, isAct, isSuccess)}
+                          {isAct && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-500 rounded-full animate-ping" />
                           )}
-                          {isAct && node.id === 'rag-ai-agent' && (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-purple-500 rounded-full animate-ping" />
+                          {isSuccess && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full flex items-center justify-center">
+                              <Check className="w-1.5 h-1.5 text-white" />
+                            </span>
                           )}
                         </div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
@@ -598,6 +703,8 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
                             : isDeg
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            : isSuccess
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                             : isAct && node.id === 'telegram-notifier'
                             ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
                             : isAct && node.id === 'rag-ai-agent'
@@ -605,7 +712,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                             : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300'
                         }`}
                       >
-                        {node.latency}ms
+                        {isSuccess ? 'Done' : `${node.latency}ms`}
                       </span>
                     </div>
 
@@ -618,6 +725,8 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                         className={`font-semibold ${
                           isCrit
                             ? 'text-rose-600 dark:text-rose-400 font-bold'
+                            : isSuccess
+                            ? 'text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1'
                             : isAct && node.id === 'telegram-notifier'
                             ? 'text-sky-600 dark:text-sky-400 font-bold flex items-center gap-1'
                             : isAct && node.id === 'rag-ai-agent'
@@ -642,7 +751,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       <div className="mt-3 bg-slate-900 dark:bg-[#070A10] border border-slate-800 dark:border-white/[0.08] text-white rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs shadow-xs">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
-            {renderIcon(selectedNode.iconType, selectedNode.status === 'CRITICAL', selectedNode.status === 'ACTIVE')}
+            {renderIcon(selectedNode.iconType, selectedNode.status === 'CRITICAL', selectedNode.status === 'ACTIVE', selectedNode.status === 'SUCCESS')}
           </div>
           <div className="flex items-center gap-2 min-w-0">
             <span className="font-bold text-slate-100 truncate">{selectedNode.name}</span>
@@ -666,7 +775,9 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                 ? 'bg-rose-500 text-white'
                 : selectedNode.status === 'DEGRADED'
                 ? 'bg-amber-500 text-white'
-                : 'bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                : selectedNode.status === 'SUCCESS' || selectedNode.status === 'NOMINAL'
+                ? 'bg-emerald-500 text-white'
+                : 'bg-indigo-500 text-white'
             }`}
           >
             {selectedNode.status}
