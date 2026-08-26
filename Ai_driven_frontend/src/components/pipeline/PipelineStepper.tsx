@@ -59,7 +59,7 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({
   return (
     <div
       id="pipeline-stepper-card"
-      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px]"
+      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px] h-full"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-white/[0.06]">

@@ -158,7 +158,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
   return (
     <div
       id="active-alert-stream-card"
-      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px]"
+      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px] h-full"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-white/[0.06]">
@@ -322,7 +322,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
       </div>
 
       {/* Footer Info */}
-      <div className="pt-2 mt-1 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-[10.5px] text-slate-500 dark:text-zinc-400">
+      <div className="pt-2 mt-auto border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-[10.5px] text-slate-500 dark:text-zinc-400">
         <span className={`font-mono ${alerts.length === 0 ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}>
           {alerts.length} active alerts in DB {alerts.length === 0 ? '· 100% Nominal' : ''}
         </span>

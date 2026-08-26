@@ -20,12 +20,12 @@ export const ChaosLab: React.FC<ChaosLabProps> = ({
   return (
     <div
       id="chaos-lab-card"
-      className="bg-white dark:bg-[#090C14] border border-[#E5E8E5] dark:border-white/[0.08] rounded-2xl p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.02)] flex flex-col justify-between transition-colors duration-300"
+      className="bg-white dark:bg-[#090C14] border border-[#E5E8E5] dark:border-white/[0.08] rounded-2xl p-4 shadow-[0_1px_2px_rgba(15,23,42,0.02)] flex flex-col justify-between transition-colors duration-300"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-0.5">
         <div className="flex items-center gap-2">
-          <span className="w-5 h-5 rounded-md bg-[#F0F2F0] dark:bg-white/[0.08] text-[#111312] dark:text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="w-5 h-5 rounded-md bg-[#0F172A] dark:bg-white/[0.08] text-white text-[10px] font-mono font-bold flex items-center justify-center">
             2
           </span>
           <h2 className="text-[12px] font-bold text-[#111312] dark:text-white tracking-wider uppercase">

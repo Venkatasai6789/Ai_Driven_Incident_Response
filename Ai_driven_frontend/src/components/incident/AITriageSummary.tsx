@@ -16,16 +16,16 @@ export const AITriageSummary: React.FC<AITriageSummaryProps> = ({
   return (
     <div
       id="ai-triage-summary-card"
-      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-xl p-3.5 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px]"
+      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px] h-full"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="px-1.5 py-0.5 rounded bg-[#0F172A] dark:bg-white/[0.08] text-white text-[10px] font-mono font-bold">
+          <span className="w-5 h-5 rounded-md bg-[#0F172A] dark:bg-white/[0.08] text-white text-[10px] font-mono font-bold flex items-center justify-center">
             3B
           </span>
           <div>
-            <h2 className="text-[11.5px] font-bold text-[#0F172A] dark:text-white tracking-wider uppercase font-sans">
+            <h2 className="text-[12px] font-bold text-[#0F172A] dark:text-white tracking-wider uppercase font-sans">
               TRIAGE & ROOT CAUSE
             </h2>
             <p className="text-[10px] text-[#64748B] dark:text-zinc-400 font-medium leading-none mt-0.5">
@@ -45,7 +45,7 @@ export const AITriageSummary: React.FC<AITriageSummaryProps> = ({
 
       {/* Structured Diagnostics Data */}
       {isLoading ? (
-        <div className="flex flex-col gap-2 text-[11px] my-1">
+        <div className="flex flex-col gap-2 text-[11px] my-1 flex-1 justify-center">
           {/* Row 1 Skeleton: Root Cause */}
           <div className="p-2.5 rounded-lg bg-[#F8FAFC] dark:bg-[#0E121C] border border-[#E2E8F0] dark:border-white/[0.08] flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -81,7 +81,7 @@ export const AITriageSummary: React.FC<AITriageSummaryProps> = ({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2 text-[11px] my-1">
+        <div className="flex flex-col gap-2 text-[11px] my-1 flex-1 justify-between">
           {/* Row 1: Root Cause */}
           <div className="p-2 rounded-lg bg-[#F8FAFC] dark:bg-[#0E121C] border border-[#E2E8F0] dark:border-white/[0.08] flex flex-col gap-1">
             <div className="flex items-center justify-between">
@@ -145,7 +145,7 @@ export const AITriageSummary: React.FC<AITriageSummaryProps> = ({
         id="view-ai-analysis-btn"
         disabled={isLoading}
         onClick={onOpenAnalysis}
-        className={`w-full mt-1 py-2 bg-[#0F172A] dark:bg-[#161B28] hover:bg-[#1E293B] dark:hover:bg-[#1F2536] active:bg-[#020617] text-white text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm border border-transparent dark:border-white/[0.08] ${
+        className={`w-full mt-auto py-2 bg-[#0F172A] dark:bg-[#161B28] hover:bg-[#1E293B] dark:hover:bg-[#1F2536] active:bg-[#020617] text-white text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm border border-transparent dark:border-white/[0.08] ${
           isLoading ? 'opacity-50 cursor-wait' : 'cursor-pointer'
         }`}
       >

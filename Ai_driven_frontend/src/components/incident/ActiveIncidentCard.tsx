@@ -100,7 +100,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
   return (
     <div
       id="active-incident-spotlight-card"
-      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px]"
+      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px] h-full"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
@@ -141,7 +141,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
 
       {/* Incident Box Container */}
       <div
-        className={`rounded-xl p-3.5 flex flex-col gap-3 transition-all ${
+        className={`rounded-xl p-3.5 flex flex-col gap-3 transition-all flex-1 justify-between ${
           isLoading
             ? 'border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0E121B]'
             : isClosed
@@ -397,7 +397,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
             <button
               id="investigate-incident-btn"
               onClick={onInvestigate}
-              className="w-full mt-0.5 py-2 bg-white dark:bg-[#151924] hover:bg-slate-50 dark:hover:bg-[#1E2433] border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-zinc-200 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs group"
+              className="w-full mt-auto py-2 bg-white dark:bg-[#151924] hover:bg-slate-50 dark:hover:bg-[#1E2433] border border-slate-200 dark:border-white/[0.08] text-slate-800 dark:text-zinc-200 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs group"
             >
               <span>Open Post-Mortem Dossier</span>
               <ArrowUpRight className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400 group-hover:text-slate-800 dark:group-hover:text-white transition-colors" />
