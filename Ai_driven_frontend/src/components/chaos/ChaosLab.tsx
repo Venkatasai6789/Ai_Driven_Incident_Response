@@ -1,16 +1,20 @@
 import React from 'react';
-import { Bug, Database, HardDrive, ShieldAlert, Search } from 'lucide-react';
+import { Bug, Database, HardDrive, ShieldAlert, Search, Loader2 } from 'lucide-react';
 import { ChaosExperiment } from '../../types';
 import { chaosExperiments } from '../../data/mockIncidents';
 import { motion } from 'motion/react';
 
 interface ChaosLabProps {
   currentExperimentId: string;
+  isInjectingChaosId?: string | null;
+  disabled?: boolean;
   onTriggerExperiment: (exp: ChaosExperiment) => void;
 }
 
 export const ChaosLab: React.FC<ChaosLabProps> = ({
   currentExperimentId,
+  isInjectingChaosId = null,
+  disabled = false,
   onTriggerExperiment,
 }) => {
   return (
@@ -29,9 +33,17 @@ export const ChaosLab: React.FC<ChaosLabProps> = ({
           </h2>
         </div>
 
-        <span className="text-[10px] text-[#606763] dark:text-zinc-400 font-medium hidden sm:inline">
-          5 Failure Scenarios
-        </span>
+        <div className="flex items-center gap-2">
+          {isInjectingChaosId && (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/40 animate-pulse">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Dispatching Chaos Fault...
+            </span>
+          )}
+          <span className="text-[10px] text-[#606763] dark:text-zinc-400 font-medium hidden sm:inline">
+            5 Failure Scenarios
+          </span>
+        </div>
       </div>
 
       <p className="text-[10.5px] text-[#606763] dark:text-zinc-400 mb-2">
@@ -42,6 +54,8 @@ export const ChaosLab: React.FC<ChaosLabProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2">
         {chaosExperiments.map((exp) => {
           const isActive = exp.id === currentExperimentId;
+          const isInjecting = exp.id === isInjectingChaosId;
+          const isBtnDisabled = disabled || (isInjectingChaosId !== null && !isInjecting);
 
           let icon = <Bug className="w-3.5 h-3.5 text-[#EF4444] dark:text-rose-400" />;
           let iconBg = 'bg-[#FEE2E2] dark:bg-rose-950/50';
@@ -63,23 +77,34 @@ export const ChaosLab: React.FC<ChaosLabProps> = ({
             <motion.button
               key={exp.id}
               id={`trigger-${exp.id}`}
+              disabled={isBtnDisabled}
               onClick={() => onTriggerExperiment(exp)}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.98 }}
-              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-left transition-all cursor-pointer min-w-0 ${
-                isActive
-                  ? 'border-[#22C55E] dark:border-emerald-500 ring-2 ring-[#DCFCE7] dark:ring-emerald-900/50 bg-[#F0FDF4] dark:bg-emerald-950/30 shadow-xs'
-                  : 'border-[#E5E8E5] dark:border-white/[0.08] bg-white dark:bg-[#0E121B] hover:border-[#CBD5E1] dark:hover:border-white/[0.18] hover:bg-[#FAFAFA] dark:hover:bg-[#141A26] shadow-xs'
+              whileHover={isBtnDisabled ? {} : { y: -1 }}
+              whileTap={isBtnDisabled ? {} : { scale: 0.98 }}
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border text-left transition-all min-w-0 ${
+                isInjecting
+                  ? 'border-[#22C55E] dark:border-emerald-500 ring-2 ring-[#DCFCE7] dark:ring-emerald-900/50 bg-[#F0FDF4] dark:bg-emerald-950/30 shadow-xs cursor-wait'
+                  : isActive
+                  ? 'border-[#22C55E] dark:border-emerald-500 ring-2 ring-[#DCFCE7] dark:ring-emerald-900/50 bg-[#F0FDF4] dark:bg-emerald-950/30 shadow-xs cursor-pointer'
+                  : isBtnDisabled
+                  ? 'border-[#E5E8E5] dark:border-white/[0.04] bg-slate-50/60 dark:bg-[#0A0D14] opacity-50 cursor-not-allowed'
+                  : 'border-[#E5E8E5] dark:border-white/[0.08] bg-white dark:bg-[#0E121B] hover:border-[#CBD5E1] dark:hover:border-white/[0.18] hover:bg-[#FAFAFA] dark:hover:bg-[#141A26] shadow-xs cursor-pointer'
               }`}
             >
               <div
-                className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}
+                className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  isInjecting ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-600' : iconBg
+                }`}
               >
-                {icon}
+                {isInjecting ? (
+                  <Loader2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                ) : (
+                  icon
+                )}
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-[10.5px] font-bold text-[#111312] dark:text-zinc-200 leading-tight truncate">
-                  {exp.title}
+                  {isInjecting ? 'Injecting...' : exp.title}
                 </span>
                 <span className="text-[9px] text-[#929894] dark:text-zinc-500 font-medium leading-none mt-0.5 truncate font-mono">
                   {exp.sop}
@@ -92,4 +117,5 @@ export const ChaosLab: React.FC<ChaosLabProps> = ({
     </div>
   );
 };
+
 

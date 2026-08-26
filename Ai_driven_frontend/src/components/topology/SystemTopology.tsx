@@ -33,6 +33,7 @@ interface SystemTopologyProps {
     edges: TopologyEdge[];
   };
   activeIncident?: ActiveIncidentState;
+  isLoading?: boolean;
   onInvestigate?: () => void;
   onSelectService?: (serviceId: string) => void;
 }
@@ -161,6 +162,7 @@ const BASE_NODES: ServiceNodeDefinition[] = [
 export const SystemTopology: React.FC<SystemTopologyProps> = ({
   topologyData,
   activeIncident,
+  isLoading = false,
   onInvestigate,
   onSelectService,
 }) => {
@@ -576,329 +578,396 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
           </AnimatePresence>
 
           {/* Responsive SVG & Node Grid Container */}
-          <div className="relative w-[670px] h-[208px] flex-shrink-0">
-            {/* SVG Animated Conduits with Mathematically Exact Port Alignment */}
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-0"
-              viewBox="0 0 670 208"
-            >
-              <defs>
-                <linearGradient id="laserNominal" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#22C55E" stopOpacity="0.8" />
-                  <stop offset="50%" stopColor="#10B981" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#22C55E" stopOpacity="0.8" />
-                </linearGradient>
-
-                <linearGradient id="laserCritical" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#F43F5E" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#EF4444" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.9" />
-                </linearGradient>
-
-                <linearGradient id="laserDegraded" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#D97706" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.9" />
-                </linearGradient>
-
-                <linearGradient id="laserAI" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#6366F1" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#8B5CF6" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.9" />
-                </linearGradient>
-
-                <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="2" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
-
-              {/* View: Ecosystem or Blast Radius Conduits */}
-              {viewMode !== 'sre-pipeline' && (
-                <>
-                  {/* 1. Path: Gateway -> Checkout */}
-                  <path d={lineGwToCheckout} fill="none" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
-                  <path
-                    d={lineGwToCheckout}
-                    fill="none"
-                    stroke={
-                      incidentService === 'checkout-service' || incidentService === 'api-gateway'
-                        ? 'url(#laserCritical)'
-                        : 'url(#laserNominal)'
-                    }
-                    strokeWidth="2.5"
-                    strokeDasharray="5 5"
-                    className="animate-laser-flow"
-                    filter="url(#glowEffect)"
-                  />
-                  <circle r="3.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#22C55E'}>
-                    <animateMotion dur="1.2s" repeatCount="indefinite" path={lineGwToCheckout} />
-                  </circle>
-
-                  {/* 2. Path: Checkout -> Database */}
-                  <path d={lineCheckoutToDb} fill="none" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
-                  <path
-                    d={lineCheckoutToDb}
-                    fill="none"
-                    stroke={
-                      incidentService === 'postgresql'
-                        ? 'url(#laserCritical)'
-                        : incidentService === 'checkout-service'
-                        ? 'url(#laserDegraded)'
-                        : 'url(#laserNominal)'
-                    }
-                    strokeWidth="2.5"
-                    strokeDasharray="5 5"
-                    className="animate-laser-flow"
-                    filter="url(#glowEffect)"
-                  />
-                  <circle r="3.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#22C55E'}>
-                    <animateMotion dur="1.4s" repeatCount="indefinite" path={lineCheckoutToDb} />
-                  </circle>
-                </>
-              )}
-
-              {/* View: AI Pipeline Conduits */}
-              {viewMode !== 'blast-radius' && (
-                <>
-                  {/* 3. Path: Alert Ingest -> Gemini RAG Agent */}
-                  <path d={lineAlertToRag} fill="none" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
-                  <path
-                    d={lineAlertToRag}
-                    fill="none"
-                    stroke="url(#laserAI)"
-                    strokeWidth="2.5"
-                    strokeDasharray="5 5"
-                    className="animate-laser-flow"
-                    filter="url(#glowEffect)"
-                  />
-                  <circle r="3.5" fill="#6366F1">
-                    <animateMotion dur="1.2s" repeatCount="indefinite" path={lineAlertToRag} />
-                  </circle>
-
-                  {/* 4. Path: Gemini RAG Agent -> FastAPI Guardrail */}
-                  <path d={lineRagToGuardrail} fill="none" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
-                  <path
-                    d={lineRagToGuardrail}
-                    fill="none"
-                    stroke="url(#laserAI)"
-                    strokeWidth="2.5"
-                    strokeDasharray="5 5"
-                    className="animate-laser-flow"
-                    filter="url(#glowEffect)"
-                  />
-                  <circle r="3.5" fill="#3B82F6">
-                    <animateMotion dur="1.2s" repeatCount="indefinite" path={lineRagToGuardrail} />
-                  </circle>
-
-                  {/* 5. Diagnostic Probe Conduit from Failing Workload to Gemini SRE Controller */}
-                  {viewMode === 'ecosystem' && (
-                    <>
-                      <path d={lineCheckoutToRag} fill="none" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
-                      <path
-                        d={lineCheckoutToRag}
-                        fill="none"
-                        stroke="url(#laserAI)"
-                        strokeWidth="2.5"
-                        strokeDasharray="5 5"
-                        className="animate-laser-flow"
-                        filter="url(#glowEffect)"
-                      />
-                      <circle r="3.5" fill="#8B5CF6">
-                        <animateMotion dur="1.0s" repeatCount="indefinite" path={lineCheckoutToRag} />
-                      </circle>
-                    </>
-                  )}
-                </>
-              )}
-            </svg>
-
-            {/* Render Interactive Mesh Nodes */}
-            {nodes.map((node) => {
-              const isSelected = selectedNode?.id === node.id;
-              const isCrit = node.status === 'CRITICAL';
-              const isDeg = node.status === 'DEGRADED';
-              const isAct = node.status === 'ACTIVE';
-
-              return (
-                <motion.div
+          {isLoading ? (
+            <div className="relative w-[670px] h-[208px] flex-shrink-0">
+              {BASE_NODES.map((node) => (
+                <div
                   key={node.id}
-                  layout
-                  transition={{ type: 'spring', stiffness: 350, damping: 28 }}
                   style={{
                     position: 'absolute',
-                    left: `${node.dynamicX}px`,
-                    top: `${node.dynamicY}px`,
+                    left: `${node.x}px`,
+                    top: `${node.y}px`,
                     width: `${CARD_WIDTH}px`,
                     height: `${CARD_HEIGHT}px`,
                   }}
-                  className="group relative"
+                  className="rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0E121B] p-2.5 flex flex-col justify-between"
                 >
-                  {/* Radar Ripple Effect for CRITICAL failing node */}
-                  {isCrit && !node.isDimmed && (
-                    <div className="absolute -inset-2 rounded-2xl bg-rose-500/25 animate-radar pointer-events-none -z-10" />
-                  )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-md skeleton-shimmer" />
+                      <div className="w-20 h-3 rounded skeleton-shimmer" />
+                    </div>
+                    <div className="w-10 h-3 rounded skeleton-shimmer" />
+                  </div>
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-white/[0.04]">
+                    <div className="w-16 h-2 rounded skeleton-shimmer" />
+                    <div className="w-12 h-2 rounded skeleton-shimmer" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="relative w-[670px] h-[208px] flex-shrink-0">
+              {/* SVG Animated Conduits with Mathematically Exact Port Alignment */}
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none z-0"
+                viewBox="0 0 670 208"
+              >
+                <defs>
+                  <linearGradient id="laserNominal" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#22C55E" stopOpacity="0.8" />
+                    <stop offset="50%" stopColor="#10B981" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#22C55E" stopOpacity="0.8" />
+                  </linearGradient>
 
-                  {/* Pulsing Glow for DEGRADED or ACTIVE node */}
-                  {isDeg && !node.isDimmed && (
-                    <div className="absolute -inset-1.5 rounded-2xl bg-amber-500/20 animate-pulse pointer-events-none -z-10" />
-                  )}
-                  {isAct && !node.isDimmed && (
-                    <div className="absolute -inset-1.5 rounded-2xl bg-indigo-500/20 animate-pulse pointer-events-none -z-10" />
-                  )}
+                  <linearGradient id="laserCritical" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#F43F5E" stopOpacity="0.9" />
+                    <stop offset="50%" stopColor="#EF4444" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.9" />
+                  </linearGradient>
 
-                  {/* Connection Port Terminals / Sockets */}
-                  {!node.isDimmed && (
-                    <>
-                      {/* Left Port Socket */}
-                      <div
-                        className={`absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 bg-white dark:bg-[#090C14] flex items-center justify-center z-20 shadow-xs transition-colors ${
-                          isCrit
-                            ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60'
-                            : isDeg
-                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60'
-                            : 'border-slate-300 dark:border-zinc-700'
-                        }`}
-                      >
-                        <div
-                          className={`w-1 h-1 rounded-full ${
-                            isCrit ? 'bg-rose-600' : isDeg ? 'bg-amber-600' : 'bg-emerald-500'
-                          }`}
-                        />
-                      </div>
+                  <linearGradient id="laserDegraded" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.9" />
+                    <stop offset="50%" stopColor="#D97706" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.9" />
+                  </linearGradient>
 
-                      {/* Right Port Socket */}
-                      <div
-                        className={`absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 bg-white dark:bg-[#090C14] flex items-center justify-center z-20 shadow-xs transition-colors ${
-                          isCrit
-                            ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60'
-                            : isDeg
-                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60'
-                            : 'border-slate-300 dark:border-zinc-700'
-                        }`}
-                      >
-                        <div
-                          className={`w-1 h-1 rounded-full ${
-                            isCrit ? 'bg-rose-600' : isDeg ? 'bg-amber-600' : 'bg-emerald-500'
-                          }`}
-                        />
-                      </div>
+                  <linearGradient id="laserAI" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#6366F1" stopOpacity="0.9" />
+                    <stop offset="50%" stopColor="#8B5CF6" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.9" />
+                  </linearGradient>
 
-                      {/* Bottom Port Socket on Checkout Node */}
-                      {node.id === 'checkout-service' && viewMode === 'ecosystem' && (
-                        <div className="absolute left-1/2 -bottom-1.5 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-indigo-500 bg-white dark:bg-[#090C14] flex items-center justify-center z-20 shadow-xs">
-                          <div className="w-1 h-1 rounded-full bg-indigo-600 animate-pulse" />
-                        </div>
-                      )}
+                  <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
 
-                      {/* Top Port Socket on Gemini RAG Agent Node */}
-                      {node.id === 'rag-ai-agent' && viewMode === 'ecosystem' && (
-                        <div className="absolute left-1/2 -top-1.5 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-indigo-500 bg-white dark:bg-[#090C14] flex items-center justify-center z-20 shadow-xs">
-                          <div className="w-1 h-1 rounded-full bg-indigo-600 animate-pulse" />
-                        </div>
-                      )}
-                    </>
-                  )}
+                {/* View: Ecosystem or Blast Radius Conduits */}
+                {viewMode !== 'sre-pipeline' && (
+                  <>
+                    {/* 1. Path: Gateway -> Checkout */}
+                    <path d={lineGwToCheckout} fill="none" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
+                    <path
+                      d={lineGwToCheckout}
+                      fill="none"
+                      stroke={
+                        incidentService === 'checkout-service' || incidentService === 'api-gateway'
+                          ? 'url(#laserCritical)'
+                          : 'url(#laserNominal)'
+                      }
+                      strokeWidth="2.5"
+                      strokeDasharray="5 5"
+                      className="animate-laser-flow"
+                      filter="url(#glowEffect)"
+                    />
+                    <circle r="3.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#22C55E'}>
+                      <animateMotion dur="1.2s" repeatCount="indefinite" path={lineGwToCheckout} />
+                    </circle>
 
-                  {/* Main Node Card */}
+                    {/* 2. Path: Checkout -> Database */}
+                    <path d={lineCheckoutToDb} fill="none" stroke="#E2E8F0" strokeWidth="3" strokeLinecap="round" />
+                    <path
+                      d={lineCheckoutToDb}
+                      fill="none"
+                      stroke={
+                        incidentService === 'postgresql' || incidentService === 'checkout-service'
+                          ? 'url(#laserCritical)'
+                          : 'url(#laserNominal)'
+                      }
+                      strokeWidth="2.5"
+                      strokeDasharray="5 5"
+                      className="animate-laser-flow"
+                      filter="url(#glowEffect)"
+                    />
+                    <circle r="3.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#22C55E'}>
+                      <animateMotion dur="1.2s" repeatCount="indefinite" path={lineCheckoutToDb} />
+                    </circle>
+
+                    {/* 3. Path: Checkout -> Telemetry Alert Webhook */}
+                    <path d={lineCheckoutToAlert} fill="none" stroke="#E2E8F0" strokeWidth="2.5" strokeDasharray="3 3" />
+                    <path
+                      d={lineCheckoutToAlert}
+                      fill="none"
+                      stroke={incidentService ? '#EF4444' : '#94A3B8'}
+                      strokeWidth="2"
+                      strokeDasharray="4 4"
+                      className="animate-laser-flow"
+                    />
+
+                    {/* 4. Path: Telemetry Webhook -> AI Agent */}
+                    <path d={lineAlertToAi} fill="none" stroke="#E2E8F0" strokeWidth="3" />
+                    <path
+                      d={lineAlertToAi}
+                      fill="none"
+                      stroke={isTriageActive ? 'url(#laserAI)' : '#CBD5E1'}
+                      strokeWidth="2.5"
+                      strokeDasharray="4 4"
+                      className={isTriageActive ? 'animate-laser-flow' : ''}
+                      filter={isTriageActive ? 'url(#glowEffect)' : undefined}
+                    />
+                    {isTriageActive && (
+                      <circle r="3.5" fill="#6366F1">
+                        <animateMotion dur="0.9s" repeatCount="indefinite" path={lineAlertToAi} />
+                      </circle>
+                    )}
+
+                    {/* 5. Path: AI Agent -> Safety Guardrail */}
+                    <path d={lineAiToSafety} fill="none" stroke="#E2E8F0" strokeWidth="3" />
+                    <path
+                      d={lineAiToSafety}
+                      fill="none"
+                      stroke={isSafetyActive || isGateActive ? 'url(#laserAI)' : '#CBD5E1'}
+                      strokeWidth="2.5"
+                      strokeDasharray="4 4"
+                      className={isSafetyActive || isGateActive ? 'animate-laser-flow' : ''}
+                    />
+                    {(isSafetyActive || isGateActive) && (
+                      <circle r="3.5" fill="#10B981">
+                        <animateMotion dur="0.9s" repeatCount="indefinite" path={lineAiToSafety} />
+                      </circle>
+                    )}
+
+                    {/* 6. Path: Safety Guardrail -> Target Pod (Feedback Remediation Loop) */}
+                    <path d={lineSafetyToTarget} fill="none" stroke="#E2E8F0" strokeWidth="2" strokeDasharray="2 2" />
+                    <path
+                      d={lineSafetyToTarget}
+                      fill="none"
+                      stroke={isVerifyActive ? '#10B981' : '#94A3B8'}
+                      strokeWidth="2"
+                      strokeDasharray="4 4"
+                      className={isVerifyActive ? 'animate-laser-flow' : ''}
+                    />
+                  </>
+                )}
+
+                {/* View: SRE Pipeline Linear DAG Conduits */}
+                {viewMode === 'sre-pipeline' && (
+                  <>
+                    <path d={linePipelineAlertToAi} fill="none" stroke="#E2E8F0" strokeWidth="3" />
+                    <path
+                      d={linePipelineAlertToAi}
+                      fill="none"
+                      stroke="url(#laserAI)"
+                      strokeWidth="3"
+                      strokeDasharray="5 5"
+                      className="animate-laser-flow"
+                      filter="url(#glowEffect)"
+                    />
+                    <circle r="3.5" fill="#6366F1">
+                      <animateMotion dur="0.8s" repeatCount="indefinite" path={linePipelineAlertToAi} />
+                    </circle>
+
+                    <path d={linePipelineAiToSafety} fill="none" stroke="#E2E8F0" strokeWidth="3" />
+                    <path
+                      d={linePipelineAiToSafety}
+                      fill="none"
+                      stroke="url(#laserNominal)"
+                      strokeWidth="3"
+                      strokeDasharray="5 5"
+                      className="animate-laser-flow"
+                      filter="url(#glowEffect)"
+                    />
+                    <circle r="3.5" fill="#22C55E">
+                      <animateMotion dur="0.8s" repeatCount="indefinite" path={linePipelineAiToSafety} />
+                    </circle>
+                  </>
+                )}
+              </svg>
+
+              {/* Interactive Node Cards */}
+              {nodes.map((node) => {
+                const isSelected = selectedNode?.id === node.id;
+                const isCrit = node.status === 'CRITICAL';
+                const isDeg = node.status === 'DEGRADED';
+                const isAct = node.status === 'ACTIVE';
+
+                return (
                   <motion.div
-                    id={`mesh-node-${node.id}`}
-                    onClick={() => {
-                      setSelectedNodeId(node.id);
+                    key={node.id}
+                    layout
+                    transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                    style={{
+                      position: 'absolute',
+                      left: `${node.dynamicX}px`,
+                      top: `${node.dynamicY}px`,
+                      width: `${CARD_WIDTH}px`,
+                      height: `${CARD_HEIGHT}px`,
                     }}
-                    whileHover={node.isDimmed ? {} : { y: -2, scale: 1.02 }}
-                    whileTap={node.isDimmed ? {} : { scale: 0.98 }}
-                    className={`w-full h-full rounded-xl px-2.5 py-2 flex flex-col justify-between cursor-pointer transition-all duration-200 select-none relative z-10 ${getNodeStyling(
-                      node,
-                      isSelected
-                    )}`}
+                    className="group relative"
                   >
-                    {/* Top Micro Bar: Protocol Chip & Status Badge */}
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
+                    {/* Radar Ripple Effect for CRITICAL failing node */}
+                    {isCrit && !node.isDimmed && (
+                      <div className="absolute -inset-2 rounded-2xl bg-rose-500/25 animate-radar pointer-events-none -z-10" />
+                    )}
+
+                    {/* Pulsing Glow for DEGRADED or ACTIVE node */}
+                    {isDeg && !node.isDimmed && (
+                      <div className="absolute -inset-1.5 rounded-2xl bg-amber-500/20 animate-pulse pointer-events-none -z-10" />
+                    )}
+                    {isAct && !node.isDimmed && (
+                      <div className="absolute -inset-1.5 rounded-2xl bg-indigo-500/20 animate-pulse pointer-events-none -z-10" />
+                    )}
+
+                    {/* Connection Port Terminals / Sockets */}
+                    {!node.isDimmed && (
+                      <>
+                        {/* Left Port Socket */}
                         <div
-                          className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
+                          className={`absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 bg-white dark:bg-[#090C14] flex items-center justify-center z-20 shadow-xs transition-colors ${
                             isCrit
-                              ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400'
+                              ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60'
                               : isDeg
-                              ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400'
-                              : isAct
-                              ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400'
-                              : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                              ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60'
+                              : 'border-slate-300 dark:border-zinc-700'
                           }`}
                         >
-                          {renderNodeIcon(node.iconType, node.status)}
+                          <div
+                            className={`w-1 h-1 rounded-full ${
+                              isCrit ? 'bg-rose-500' : isDeg ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}
+                          />
                         </div>
-                        <span className="text-[11px] font-bold text-slate-900 dark:text-zinc-100 tracking-tight truncate">
-                          {node.name}
-                        </span>
-                      </div>
 
-                      {/* Status / Latency Tag */}
-                      <span
-                        className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold flex-shrink-0 flex items-center gap-1 ${
-                          isCrit
-                            ? 'bg-rose-600 text-white animate-pulse'
-                            : isDeg
-                            ? 'bg-amber-500 text-white'
-                            : isAct
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40'
-                        }`}
-                      >
-                        {isCrit && <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />}
-                        {node.status === 'CRITICAL'
-                          ? 'CRITICAL'
-                          : node.status === 'DEGRADED'
-                          ? 'DEGRADED'
-                          : node.status === 'ACTIVE'
-                          ? 'ACTIVE'
-                          : `${node.latency}ms`}
-                      </span>
-                    </div>
-
-                    {/* Bottom Telemetry & Resource Meter */}
-                    <div className="flex items-center justify-between text-[9.5px] mt-0.5 pt-1 border-t border-slate-100 dark:border-white/[0.08]">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                        {/* Right Port Socket */}
+                        <div
+                          className={`absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 bg-white dark:bg-[#090C14] flex items-center justify-center z-20 shadow-xs transition-colors ${
                             isCrit
-                              ? 'bg-rose-600 animate-ping'
+                              ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/60'
                               : isDeg
-                              ? 'bg-amber-500 animate-pulse'
-                              : isAct
-                              ? 'bg-indigo-600 animate-pulse'
-                              : 'bg-emerald-500'
-                          }`}
-                        />
-                        <span
-                          className={`font-semibold truncate ${
-                            isCrit
-                              ? 'text-rose-700 dark:text-rose-400 font-bold'
-                              : isDeg
-                              ? 'text-amber-700 dark:text-amber-400 font-bold'
-                              : isAct
-                              ? 'text-indigo-700 dark:text-indigo-400 font-bold'
-                              : 'text-emerald-700 dark:text-emerald-400'
+                              ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60'
+                              : 'border-slate-300 dark:border-zinc-700'
                           }`}
                         >
-                          {node.statusLabel}
+                          <div
+                            className={`w-1 h-1 rounded-full ${
+                              isCrit ? 'bg-rose-500' : isDeg ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Card Body */}
+                    <motion.div
+                      onClick={() => {
+                        setSelectedNodeId(node.id);
+                        if (onSelectService) onSelectService(node.id);
+                      }}
+                      whileHover={{ scale: node.isDimmed ? 1 : 1.02 }}
+                      whileTap={{ scale: node.isDimmed ? 1 : 0.98 }}
+                      className={`w-full h-full rounded-xl p-2 flex flex-col justify-between transition-all cursor-pointer select-none ${
+                        node.isDimmed
+                          ? 'opacity-20 pointer-events-none bg-slate-100 border border-slate-200'
+                          : isSelected
+                          ? 'border-2 border-slate-900 dark:border-emerald-400 bg-white dark:bg-[#0E121B] shadow-md ring-2 ring-slate-900/10 dark:ring-emerald-400/20'
+                          : isCrit
+                          ? 'border-2 border-rose-500 bg-rose-50/90 dark:bg-rose-950/30 shadow-xs'
+                          : isDeg
+                          ? 'border-2 border-amber-400 bg-amber-50/90 dark:bg-amber-950/30 shadow-xs'
+                          : isAct
+                          ? 'border-2 border-indigo-500 bg-indigo-50/90 dark:bg-indigo-950/30 shadow-xs'
+                          : 'border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0E121B] hover:border-slate-300 dark:hover:border-white/[0.18] shadow-xs'
+                      }`}
+                    >
+                      {/* Top Row: Icon + Name + Status */}
+                      <div className="flex items-center justify-between min-w-0">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-1">
+                          <div
+                            className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${
+                              isCrit
+                                ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600'
+                                : isDeg
+                                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600'
+                                : isAct
+                                ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600'
+                                : 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300'
+                            }`}
+                          >
+                            {renderNodeIcon(node.iconType, node.status)}
+                          </div>
+                          <span className="text-[11px] font-bold text-slate-900 dark:text-zinc-100 tracking-tight truncate">
+                            {node.name}
+                          </span>
+                        </div>
+
+                        {/* Status / Latency Tag */}
+                        <span
+                          className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold flex-shrink-0 flex items-center gap-1 ${
+                            isCrit
+                              ? 'bg-rose-600 text-white animate-pulse'
+                              : isDeg
+                              ? 'bg-amber-500 text-white'
+                              : isAct
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40'
+                          }`}
+                        >
+                          {isCrit && <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />}
+                          {node.status === 'CRITICAL'
+                            ? 'CRITICAL'
+                            : node.status === 'DEGRADED'
+                            ? 'DEGRADED'
+                            : node.status === 'ACTIVE'
+                            ? 'ACTIVE'
+                            : `${node.latency}ms`}
                         </span>
                       </div>
 
-                      <span className="font-mono text-[9px] text-slate-400 dark:text-zinc-400 font-medium flex-shrink-0">
-                        {node.protocol.split('/')[0]}
-                      </span>
-                    </div>
+                      {/* Bottom Telemetry & Resource Meter */}
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-white/[0.04]">
+                        <div className="flex items-center gap-1 min-w-0">
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                              isCrit
+                                ? 'bg-rose-500 animate-ping'
+                                : isDeg
+                                ? 'bg-amber-500'
+                                : isAct
+                                ? 'bg-indigo-500 animate-pulse'
+                                : 'bg-emerald-500'
+                            }`}
+                          />
+                          <span
+                            className={`font-mono text-[9.5px] truncate ${
+                              isCrit
+                                ? 'text-rose-700 dark:text-rose-400 font-bold'
+                                : isDeg
+                                ? 'text-amber-700 dark:text-amber-400 font-bold'
+                                : isAct
+                                ? 'text-indigo-700 dark:text-indigo-400 font-bold'
+                                : 'text-emerald-700 dark:text-emerald-400'
+                            }`}
+                          >
+                            {node.statusLabel}
+                          </span>
+                        </div>
+
+                        <span className="font-mono text-[9px] text-slate-400 dark:text-zinc-400 font-medium flex-shrink-0">
+                          {node.protocol.split('/')[0]}
+                        </span>
+                      </div>
+                    </motion.div>
                   </motion.div>
-                </motion.div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Selected Node Telemetry Strip */}
-        {selectedNode && (
+        {isLoading ? (
+          <div className="mt-2 bg-slate-100 dark:bg-[#0E121C] rounded-xl p-2.5 flex items-center justify-between text-xs border border-transparent dark:border-white/[0.08]">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-7 h-7 rounded-lg skeleton-shimmer flex-shrink-0" />
+              <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                <div className="w-48 h-3 rounded skeleton-shimmer" />
+                <div className="w-64 h-2 rounded skeleton-shimmer" />
+              </div>
+            </div>
+          </div>
+        ) : selectedNode && (
           <div className="mt-2 bg-slate-900 dark:bg-[#0E121B] text-white rounded-xl p-2.5 flex items-center justify-between text-xs animate-in fade-in duration-150 shadow-xs border border-transparent dark:border-white/[0.08]">
             <div className="flex items-center gap-3 min-w-0">
               <div

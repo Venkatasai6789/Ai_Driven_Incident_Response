@@ -167,8 +167,26 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
       {/* Alert List Items */}
       <div className="flex flex-col gap-1.5 my-1 flex-1 justify-center">
         {isLoading ? (
-          <div className="py-8 text-center text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
-            Loading alerts from PostgreSQL...
+          <div className="flex flex-col gap-1.5 w-full">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="w-full flex items-center justify-between p-2 rounded-lg border border-[#E2E8F0] dark:border-white/[0.08] bg-white dark:bg-[#0E121B]"
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="w-3.5 h-3.5 rounded-full skeleton-shimmer flex-shrink-0" />
+                  <div className="w-8 h-4 rounded skeleton-shimmer flex-shrink-0" />
+                  <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <div className="w-36 h-3 rounded skeleton-shimmer" />
+                      <div className="w-12 h-3 rounded skeleton-shimmer" />
+                    </div>
+                    <div className="w-24 h-2 rounded skeleton-shimmer" />
+                  </div>
+                </div>
+                <div className="w-10 h-3 rounded skeleton-shimmer ml-2 flex-shrink-0" />
+              </div>
+            ))}
           </div>
         ) : alerts.length === 0 ? (
           <div className="py-6 flex flex-col items-center justify-center text-center p-4 rounded-xl border border-dashed border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/10">

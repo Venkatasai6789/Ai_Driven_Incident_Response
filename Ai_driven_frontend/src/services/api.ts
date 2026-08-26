@@ -4,6 +4,16 @@
  * In production on Vercel, set VITE_API_BASE_URL=https://your-backend.onrender.com
  */
 
+import {
+  SystemOverviewData,
+  SLOMetricsData,
+  IncidentTriageData,
+  IncidentPipelineData,
+  PostMortemData,
+  TopologyMeshData,
+  TelemetryAlertItem,
+} from '../types';
+
 // Helper to determine the API base URL
 export const getApiBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -63,57 +73,100 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 export const ApiService = {
   // System Health
   checkHealth: async () => {
-    return apiRequest<{ status: string; timestamp?: string }>('/health');
+    return apiRequest<{ status: string; timestamp?: string; model?: string }>('/health');
   },
 
   // System Overview
   getSystemOverview: async () => {
-    return apiRequest<any>('/api/v1/system/overview');
+    return apiRequest<SystemOverviewData>('/api/v1/system/overview');
   },
 
   // Topology Mesh
   getTopologyMesh: async () => {
-    return apiRequest<any>('/api/v1/topology/mesh');
+    return apiRequest<TopologyMeshData>('/api/v1/topology/mesh');
   },
 
   // Inject Chaos Experiment
-  injectChaos: async (experimentId: string) => {
-    return apiRequest<any>('/api/v1/chaos/inject', {
+  injectChaos: async (experimentId: string, targetService?: string) => {
+    return apiRequest<{
+      success: boolean;
+      incident_id: string;
+      scenario: string;
+      status: string;
+      spawned_at: string;
+      remediation_proposed?: any;
+    }>('/api/v1/chaos/inject', {
       method: 'POST',
-      body: JSON.stringify({ experiment_id: experimentId }),
+      body: JSON.stringify({
+        experiment_id: experimentId,
+        target_service: targetService,
+        dry_run: true,
+      }),
     });
   },
 
   // Fetch Alerts
-  getAlerts: async () => {
-    return apiRequest<any[]>('/api/v1/alerts');
+  getAlerts: async (statusFilter?: string, limit: number = 10) => {
+    const query = new URLSearchParams();
+    if (statusFilter) query.append('status_filter', statusFilter);
+    if (limit) query.append('limit', limit.toString());
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+    return apiRequest<TelemetryAlertItem[]>(`/api/v1/alerts${queryString}`);
   },
 
   // Active Incident State
   getActiveIncident: async () => {
-    return apiRequest<any>('/api/v1/incidents/active');
+    return apiRequest<{
+      incident_id: string | null;
+      title: string;
+      service: string;
+      severity: string;
+      time_ago: string;
+      description: string;
+      confidence: number;
+      sop_matched: string;
+      duration: string;
+      blast_radius: string;
+      status: string;
+    }>('/api/v1/incidents/active');
+  },
+
+  // Incident Triage Analysis
+  getIncidentTriage: async (incidentId: string) => {
+    return apiRequest<IncidentTriageData>(`/api/v1/incidents/${incidentId}/triage`);
   },
 
   // Incident Pipeline Steps
   getIncidentPipeline: async (incidentId: string) => {
-    return apiRequest<any>(`/api/v1/incidents/${incidentId}/pipeline`);
+    return apiRequest<IncidentPipelineData>(`/api/v1/incidents/${incidentId}/pipeline`);
   },
 
   // Execute Remediation
-  executeRemediation: async (incidentId: string) => {
-    return apiRequest<any>(`/api/v1/incidents/${incidentId}/execute`, {
+  executeRemediation: async (incidentId: string, operatorId?: string) => {
+    return apiRequest<{
+      success: boolean;
+      incident_id: string;
+      executed_command: string;
+      operator_id: string;
+      result: any;
+      receipt: any;
+    }>(`/api/v1/incidents/${incidentId}/execute`, {
       method: 'POST',
+      body: JSON.stringify({
+        override_approval: true,
+        operator_id: operatorId || 'p.venkatsai333@gmail.com',
+      }),
     });
   },
 
   // SLO & MTTR Metrics
-  getSLOMetrics: async () => {
-    return apiRequest<any>('/api/v1/metrics/slo');
+  getSLOMetrics: async (range: string = '1h') => {
+    return apiRequest<SLOMetricsData>(`/api/v1/metrics/slo?range=${encodeURIComponent(range)}`);
   },
 
   // Post-Mortem Dossier
   getPostMortem: async (incidentId: string) => {
-    return apiRequest<any>(`/api/v1/incidents/${incidentId}/postmortem`);
+    return apiRequest<PostMortemData>(`/api/v1/incidents/${incidentId}/postmortem`);
   },
 
   // Trigger Inbound Webhook Alert
@@ -187,3 +240,4 @@ export const ApiService = {
     };
   },
 };
+

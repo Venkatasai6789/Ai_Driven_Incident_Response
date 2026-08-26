@@ -30,12 +30,14 @@ interface PostMortemDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   activeIncident: ActiveIncidentState;
+  isLoadingPostMortem?: boolean;
 }
 
 export const PostMortemDrawer: React.FC<PostMortemDrawerProps> = ({
   isOpen,
   onClose,
   activeIncident,
+  isLoadingPostMortem = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'Summary' | 'Timeline' | 'Remediation' | 'Actions'>('Summary');
   const [copied, setCopied] = useState(false);
@@ -273,7 +275,27 @@ ${activeIncident.postMortem.actionItems.map((a, i) => `${i + 1}. ${a}`).join('\n
 
             {/* Drawer Body: Tabbed Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-slate-900 dark:text-zinc-100">
-              {activeTab === 'Summary' && (
+              {isLoadingPostMortem ? (
+                <div className="space-y-3">
+                  <div className="bg-white dark:bg-[#0E121C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3.5 flex flex-col gap-2">
+                    <div className="w-36 h-3 rounded skeleton-shimmer" />
+                    <div className="w-full h-3.5 rounded skeleton-shimmer" />
+                    <div className="w-4/5 h-3.5 rounded skeleton-shimmer" />
+                    <div className="w-2/3 h-3.5 rounded skeleton-shimmer" />
+                  </div>
+                  <div className="bg-white dark:bg-[#0E121C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3.5 flex flex-col gap-2">
+                    <div className="w-40 h-3 rounded skeleton-shimmer" />
+                    <div className="grid grid-cols-2 gap-2">
+                      {[0, 1, 2, 3].map((i) => (
+                        <div key={i} className="bg-slate-50 dark:bg-[#131826] rounded-lg p-2.5 flex flex-col gap-1.5">
+                          <div className="w-20 h-2 rounded skeleton-shimmer" />
+                          <div className="w-16 h-4 rounded skeleton-shimmer" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : activeTab === 'Summary' && (
                 <div className="space-y-3">
                   {/* Section 1: Executive Summary */}
                   <div className="bg-white dark:bg-[#0E121C] border border-slate-200 dark:border-white/[0.08] rounded-xl p-3.5 shadow-2xs">

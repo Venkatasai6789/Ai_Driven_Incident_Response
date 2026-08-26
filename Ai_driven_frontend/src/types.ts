@@ -7,6 +7,7 @@ export interface PipelineStep {
   label: string;
   sublabel?: string;
   time?: string;
+  timestamp?: string;
   status: PipelineStepStatus;
 }
 
@@ -32,13 +33,20 @@ export interface TopologyNode {
   errorRate?: string;
   resourceUsage?: string;
   protocol?: string;
+  active_incident_id?: string | null;
 }
 
 export interface TopologyEdge {
   from: string;
   to: string;
-  status?: 'nominal' | 'active' | 'warning' | 'critical';
+  status?: 'HEALTHY' | 'DEGRADED' | 'nominal' | 'active' | 'warning' | 'critical';
   latency_ms?: number;
+  p99_ms?: number;
+}
+
+export interface TopologyMeshData {
+  nodes: TopologyNode[];
+  edges: TopologyEdge[];
 }
 
 export interface AlertItem {
@@ -90,15 +98,117 @@ export interface ChaosExperiment {
 
 export interface TelemetryAlertItem {
   id: string;
+  incident_id?: string;
   incidentId?: string;
-  experimentId?: string;
+  experimentId: string;
   severity: IncidentSeverity;
   title: string;
   service: string;
   metric: string;
   timeAgo: string;
   status: 'ACTIVE' | 'FIRING' | 'RESOLVING' | 'INVESTIGATING' | 'RESOLVED' | 'CLOSED';
+  source?: string;
+  created_at?: string;
   createdAt?: string;
+}
+
+export interface SystemOverviewData {
+  cluster_health: 'OPERATIONAL' | 'DEGRADED' | 'CRITICAL';
+  slo_uptime_pct: number;
+  active_incidents: {
+    critical: number;
+    high: number;
+    degraded: number;
+    total_unresolved: number;
+  };
+  inference_engine: {
+    model: string;
+    status: string;
+    p99_latency_ms: number;
+  };
+  vector_index: {
+    engine: string;
+    index_type: string;
+    total_runbooks: number;
+    average_match_rate: number;
+  };
+}
+
+export interface SLOMetricsData {
+  time_range: string;
+  mttr_avg_seconds: number;
+  mttr_delta_pct: number;
+  auto_resolve_pct: number;
+  auto_resolve_delta_pct: number;
+  incidents_resolved_count: number;
+  triage_precision_pct: number;
+  timeseries: Array<{
+    time: string;
+    mttr: number;
+    accuracy: number;
+    volume: number;
+  }>;
+}
+
+export interface IncidentTriageData {
+  incident_id: string;
+  root_cause: string;
+  confidence_score: number;
+  sop_runbook: {
+    id: string;
+    title: string;
+    cosine_similarity: number;
+  };
+  guardrail: {
+    action_classification: string;
+    requires_telegram_approval: boolean;
+    risk_level: 'LOW' | 'MEDIUM' | 'HIGH';
+    blast_radius: string;
+  };
+  evidence_sources: string[];
+}
+
+export interface IncidentPipelineData {
+  incident_id: string;
+  current_step_index: number;
+  steps: Array<{
+    id: number;
+    label: string;
+    timestamp?: string;
+    time?: string;
+    sublabel?: string;
+    status: 'completed' | 'active' | 'pending';
+  }>;
+  current_step_name: string;
+  current_step_description: string;
+  proposed_command: string;
+  risk_level: 'LOW' | 'HIGH';
+  category: 'SAFE' | 'DESTRUCTIVE';
+  next_step_label: string;
+  next_step_status: string;
+}
+
+export interface PostMortemData {
+  incident_id: string;
+  title: string;
+  executive_summary: string;
+  impact: {
+    service: string;
+    severity: string;
+    duration: string;
+    users_affected: string;
+    availability_impact: string;
+  };
+  root_cause_analysis: string;
+  terminal_output: string;
+  timeline: Array<{
+    time: string;
+    event: string;
+    source: string;
+  }>;
+  preventative_measures: string[];
+  actionItems?: string[];
+  action_items?: string[];
 }
 
 export interface ActiveIncidentState {

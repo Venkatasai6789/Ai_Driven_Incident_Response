@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QuickRail } from './components/shell/QuickRail';
 import { TopStatusBar } from './components/shell/TopStatusBar';
 import { SystemTopology } from './components/topology/SystemTopology';
@@ -9,13 +9,23 @@ import { ActiveIncidentCard } from './components/incident/ActiveIncidentCard';
 import { PipelineStepper } from './components/pipeline/PipelineStepper';
 import { SystemMetrics } from './components/metrics/SystemMetrics';
 import { PostMortemDrawer } from './components/drawer/PostMortemDrawer';
-import { defaultOOMIncident, chaosExperiments, resolvedIncidentState } from './data/mockIncidents';
-import { ChaosExperiment, ActiveIncidentState } from './types';
-import { ApiService, API_BASE_URL } from './services/api';
+import { chaosExperiments, resolvedIncidentState } from './data/mockIncidents';
+import { ChaosExperiment, ActiveIncidentState, SystemOverviewData, SLOMetricsData, TopologyMeshData } from './types';
+import { ApiService } from './services/api';
 
 export default function App() {
   const [activeIncident, setActiveIncident] = useState<ActiveIncidentState>(resolvedIncidentState);
   const [currentExperimentId, setCurrentExperimentId] = useState<string>('nominal');
+  const [isInjectingChaosId, setIsInjectingChaosId] = useState<string | null>(null);
+  const [isLoadingInitial, setIsLoadingInitial] = useState<boolean>(true);
+  const [isLoadingIncident, setIsLoadingIncident] = useState<boolean>(false);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
+
+  const [systemOverview, setSystemOverview] = useState<SystemOverviewData | null>(null);
+  const [sloMetrics, setSloMetrics] = useState<SLOMetricsData | null>(null);
+  const [topologyData, setTopologyData] = useState<TopologyMeshData | null>(null);
+  const [currentRange, setCurrentRange] = useState<string>('1h');
+
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
@@ -30,24 +40,133 @@ export default function App() {
   // Left sidebar expanded/collapsed state
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(false);
 
-  // Connect to live WebSocket events stream from backend
+  // Helper to fetch full incident triage & pipeline from backend and hydrate without mock flash
+  const hydrateIncidentFromBackend = useCallback(async (incidentId: string, fallbackExp?: ChaosExperiment) => {
+    setIsLoadingIncident(true);
+    try {
+      const [triageRes, pipelineRes, postMortemRes] = await Promise.allSettled([
+        ApiService.getIncidentTriage(incidentId),
+        ApiService.getIncidentPipeline(incidentId),
+        ApiService.getPostMortem(incidentId),
+      ]);
+
+      const triage = triageRes.status === 'fulfilled' ? triageRes.value : null;
+      const pipeline = pipelineRes.status === 'fulfilled' ? pipelineRes.value : null;
+      const postMortem = postMortemRes.status === 'fulfilled' ? postMortemRes.value : null;
+
+      const fallback = fallbackExp || chaosExperiments[0];
+      const service = triage?.service || fallback.service;
+      const severity = triage?.severity || fallback.severity;
+      const confidence = triage?.confidence_score 
+        ? Math.round(triage.confidence_score * 1000) / 10 
+        : fallback.confidence;
+
+      const steps = (pipeline?.steps && pipeline.steps.length > 0)
+        ? pipeline.steps.map((s, idx) => ({
+            id: s.step_number || idx + 1,
+            label: s.name,
+            sublabel: s.status === 'COMPLETED' ? 'Verified' : s.status === 'IN_PROGRESS' ? 'Active' : 'Pending',
+            time: s.executed_at ? new Date(s.executed_at).toLocaleTimeString() : undefined,
+            status: (s.status === 'COMPLETED' ? 'completed' : s.status === 'IN_PROGRESS' ? 'active' : 'pending') as 'completed' | 'active' | 'pending',
+          }))
+        : [
+            { id: 1, label: 'Telemetry Ingest', sublabel: 'Verified', time: '11:24:03', status: 'completed' as const },
+            { id: 2, label: 'Vector Runbook', sublabel: 'Verified', time: '11:24:04', status: 'completed' as const },
+            { id: 3, label: 'Root Diagnostics', sublabel: 'Verified', time: '11:24:05', status: 'completed' as const },
+            { id: 4, label: 'Safety Guardrail', sublabel: 'Verified', time: '11:24:06', status: 'completed' as const },
+            { id: 5, label: 'Rolling Remediation', sublabel: 'Executing', time: 'Live', status: 'active' as const },
+            { id: 6, label: 'Health Verification', sublabel: 'Pending', time: 'Pending', status: 'pending' as const },
+          ];
+
+      const currentStepIdx = pipeline?.current_step_index ?? 4;
+
+      const updatedIncident: ActiveIncidentState = {
+        incidentId,
+        title: triage?.root_cause ? `${service.toUpperCase()} — ${triage.root_cause}` : `${service.toUpperCase()} — ${fallback.title}`,
+        service,
+        severity,
+        status: (triage?.status as any) || 'OPEN',
+        timeAgo: 'Just now',
+        description: triage?.root_cause || fallback.description,
+        confidence,
+        sopMatched: triage?.sop_matched || fallback.sop,
+        duration: triage?.execution_time_seconds ? `${triage.execution_time_seconds}s` : fallback.duration,
+        blastRadius: triage?.blast_radius || fallback.blastRadius,
+        currentStepIndex: currentStepIdx,
+        steps,
+        currentStepName: pipeline?.current_step_name || 'Autonomous SRE Remediation Execution',
+        currentStepDescription: pipeline?.current_step_description || 'Executing deterministic zero-blast-radius command in cluster environment...',
+        proposedCommand: triage?.remediation_command || fallback.command,
+        riskLevel: triage?.risk_level || fallback.riskLevel,
+        category: (triage?.guardrail_status === 'PASSED' || fallback.category === 'SAFE') ? 'SAFE' : 'DESTRUCTIVE',
+        nextStepLabel: pipeline?.next_step_label || fallback.nextStep,
+        nextStepStatus: pipeline?.next_step_status || 'Automated Authorization Granted',
+        rootCause: triage?.root_cause || fallback.rootCause,
+        recommendedAction: triage?.sop_matched ? `Execute SOP ${triage.sop_matched}` : fallback.recommendedAction,
+        evidenceSources: fallback.evidenceSources,
+        terminalOutput: triage?.remediation_output || fallback.terminalOutput,
+        timeline: fallback.timeline,
+        postMortem: postMortem ? {
+          executiveSummary: postMortem.executive_summary || fallback.postMortem.executiveSummary,
+          impact: {
+            service,
+            severity,
+            duration: postMortem.timeline?.detection_to_resolution_seconds ? `${postMortem.timeline.detection_to_resolution_seconds}s` : fallback.postMortem.impact.duration,
+            usersAffected: postMortem.impact?.users_affected || fallback.postMortem.impact.usersAffected,
+            availabilityImpact: postMortem.impact?.availability_impact || fallback.postMortem.impact.availabilityImpact,
+          },
+          rootCauseAnalysis: postMortem.root_cause_analysis || fallback.postMortem.rootCauseAnalysis,
+          preventativeMeasures: postMortem.preventative_measures || fallback.postMortem.preventativeMeasures,
+          actionItems: postMortem.action_items || fallback.postMortem.actionItems,
+        } : fallback.postMortem,
+      };
+
+      setActiveIncident(updatedIncident);
+      // Refresh system overview and metrics
+      ApiService.getSystemOverview().then(setSystemOverview).catch(() => {});
+      ApiService.getSLOMetrics(currentRange).then(setSloMetrics).catch(() => {});
+    } catch (err) {
+      console.debug('Failed to hydrate live incident:', err);
+    } finally {
+      setIsLoadingIncident(false);
+    }
+  }, [currentRange]);
+
+  // Initial load: Fetch System Overview, SLO Metrics, Topology Mesh & Active Incident in parallel
   useEffect(() => {
-    // Check if backend has an ongoing incident
-    ApiService.getActiveIncident()
-      .then((data) => {
+    setIsLoadingInitial(true);
+    Promise.allSettled([
+      ApiService.getSystemOverview(),
+      ApiService.getSLOMetrics(currentRange),
+      ApiService.getTopologyMesh(),
+      ApiService.getActiveIncident(),
+    ]).then(([overviewRes, sloRes, topoRes, incidentRes]) => {
+      if (overviewRes.status === 'fulfilled' && overviewRes.value) {
+        setSystemOverview(overviewRes.value);
+      }
+      if (sloRes.status === 'fulfilled' && sloRes.value) {
+        setSloMetrics(sloRes.value);
+      }
+      if (topoRes.status === 'fulfilled' && topoRes.value) {
+        setTopologyData(topoRes.value);
+      }
+      if (incidentRes.status === 'fulfilled' && incidentRes.value) {
+        const data = incidentRes.value;
         if (data && data.incident_id && data.service && data.service !== 'nominal' && data.status !== 'NOMINAL' && data.status !== 'CLOSED' && data.status !== 'RESOLVED') {
           const matchedExp = chaosExperiments.find(
             (e) => e.service === data.service || (data.service === 'checkout-service' && e.type === 'oom')
           );
-          if (matchedExp) {
-            handleTriggerExperiment(matchedExp, data.incident_id);
-          }
+          hydrateIncidentFromBackend(data.incident_id, matchedExp);
         }
-      })
-      .catch(() => {
-        // Backend offline or quiet fallback
-      });
+      }
+      setIsLoadingInitial(false);
+    }).catch(() => {
+      setIsLoadingInitial(false);
+    });
+  }, [hydrateIncidentFromBackend]);
 
+  // Connect to live WebSocket events stream from backend
+  useEffect(() => {
     const ws = ApiService.connectWebSocket(
       (data) => {
         if (data) {
@@ -59,8 +178,8 @@ export default function App() {
               (e) => e.service === service || (service === 'checkout-service' && e.type === 'oom')
             ) || chaosExperiments[0];
 
-            if (matchedExp) {
-              handleTriggerExperiment(matchedExp, incId);
+            if (incId) {
+              hydrateIncidentFromBackend(incId, matchedExp);
             }
           } else if (data.event_type === 'REMEDIATION_EXECUTING' || data.type === 'REMEDIATION_EXECUTING') {
             setActiveIncident((prev) => {
@@ -101,6 +220,9 @@ export default function App() {
               };
             });
             setCurrentExperimentId('nominal');
+            // Refresh system overview and metrics upon resolution
+            ApiService.getSystemOverview().then(setSystemOverview).catch(() => {});
+            ApiService.getSLOMetrics(currentRange).then(setSloMetrics).catch(() => {});
           }
         }
       },
@@ -112,7 +234,7 @@ export default function App() {
     return () => {
       ws.disconnect();
     };
-  }, []);
+  }, [hydrateIncidentFromBackend, currentRange]);
 
   useEffect(() => {
     if (isDark) {
@@ -124,147 +246,67 @@ export default function App() {
     }
   }, [isDark]);
 
-  // Triggering a chaos experiment from Card 2 (Chaos Lab) injects the simulation into the cluster
-  const handleTriggerChaosExperiment = (exp: ChaosExperiment) => {
+  // Triggering a chaos experiment from Card 2 (Chaos Lab):
+  // 1. Immediately engage skeleton loaders (NO MOCK DEMO DATA FLASH)
+  // 2. Call backend /api/v1/chaos/inject
+  // 3. Hydrate live responses into the UI
+  const handleTriggerChaosExperiment = async (exp: ChaosExperiment) => {
     setCurrentExperimentId(exp.id);
+    setIsInjectingChaosId(exp.id);
+    setIsLoadingIncident(true);
 
-    const fallbackIncId = exp.id.replace('exp-', 'INC-2026-0824-');
-
-    const updatedIncident: ActiveIncidentState = {
-      incidentId: fallbackIncId,
-      title: `${exp.service.toUpperCase()} — ${exp.title}`,
-      service: exp.service,
-      severity: exp.severity,
-      status: 'OPEN',
-      timeAgo: 'Just now',
-      description: exp.description,
-      confidence: exp.confidence,
-      sopMatched: exp.sop,
-      duration: '1.2s',
-      blastRadius: exp.blastRadius,
-      currentStepIndex: 3, // Step 4: Safety Guardrail active
-      steps: [
-        { id: 1, label: 'Ingest', sublabel: '11:24:03', time: '11:24:03', status: 'completed' },
-        { id: 2, label: 'Vector', sublabel: '11:24:04', time: '11:24:04', status: 'completed' },
-        { id: 3, label: 'Triage', sublabel: '11:24:05', time: '11:24:05', status: 'completed' },
-        { id: 4, label: 'Guardrail', sublabel: '11:24:06', time: '11:24:06', status: 'active' },
-        { id: 5, label: 'Execute', sublabel: 'Pending', time: 'Pending', status: 'pending' },
-        { id: 6, label: 'Verify', sublabel: 'Pending', time: 'Pending', status: 'pending' },
-      ],
-      currentStepName: 'Deterministic Safety Guardrail Policy',
-      currentStepDescription: 'Evaluating proposed remediation command against zero-blast-radius execution rules...',
-      proposedCommand: exp.command,
-      riskLevel: exp.riskLevel,
-      category: exp.category === 'SAFE' ? 'SAFE' : 'DESTRUCTIVE',
-      nextStepLabel: exp.nextStep,
-      nextStepStatus: 'Automated Authorization Granted',
-      rootCause: exp.rootCause,
-      recommendedAction: exp.recommendedAction,
-      evidenceSources: exp.evidenceSources,
-      terminalOutput: exp.terminalOutput,
-      timeline: exp.timeline,
-      postMortem: exp.postMortem,
-    };
-
-    setActiveIncident(updatedIncident);
-
-    // Call backend API to create real incident in DB & Telegram approval request
-    ApiService.injectChaos(exp.id)
-      .then((res) => {
-        if (res && res.incident_id) {
-          setActiveIncident((prev) => ({
-            ...prev,
-            incidentId: res.incident_id,
-          }));
-        }
-      })
-      .catch(() => {
-        // Standalone offline fallback
-      });
+    try {
+      const res = await ApiService.injectChaos(exp.id, exp.service);
+      if (res && res.incident_id) {
+        await hydrateIncidentFromBackend(res.incident_id, exp);
+      } else {
+        // Fallback hydration if backend returned non-standard payload
+        await hydrateIncidentFromBackend(exp.id.replace('exp-', 'INC-2026-0824-'), exp);
+      }
+    } catch (err) {
+      console.debug('Chaos injection error, falling back to local simulation:', err);
+      await hydrateIncidentFromBackend(exp.id.replace('exp-', 'INC-2026-0824-'), exp);
+    } finally {
+      setIsInjectingChaosId(null);
+    }
   };
 
-  // Inspecting an alert from Card 3A (Telemetry Alerts) ONLY selects the alert for viewing diagnostics
-  // It is purely a UI view action and NEVER dispatches anything to Telegram or injects chaos.
+  // Inspecting an alert from Card 3A (Telemetry Alerts)
   const handleSelectAlertById = (experimentId: string, incidentId?: string, alertStatus?: string) => {
     setCurrentExperimentId(experimentId);
     const matchedExp = chaosExperiments.find((e) => e.id === experimentId);
-    if (matchedExp) {
-      const isAlertClosed = !alertStatus || alertStatus === 'RESOLVED' || alertStatus === 'CLOSED' || alertStatus === 'NOMINAL';
+    const isAlertClosed = !alertStatus || alertStatus === 'RESOLVED' || alertStatus === 'CLOSED' || alertStatus === 'NOMINAL';
 
-      setActiveIncident((prev) => {
-        if (isAlertClosed) {
-          return {
-            ...prev,
-            incidentId: incidentId || prev.incidentId || matchedExp.id.replace('exp-', 'INC-2026-0824-'),
-            title: `${matchedExp.service.toUpperCase()} — ${matchedExp.title}`,
-            service: matchedExp.service,
-            severity: matchedExp.severity,
-            status: 'CLOSED',
-            timeAgo: 'Past Alert',
-            description: matchedExp.description,
-            confidence: matchedExp.confidence,
-            sopMatched: matchedExp.sop,
-            duration: '0.0s',
-            blastRadius: matchedExp.blastRadius,
-            currentStepIndex: 5,
-            steps: prev.steps.map((s) => ({
-              ...s,
-              status: 'completed' as const,
-              sublabel: 'Verified',
-            })),
-            currentStepName: 'Continuous SRE Health Monitoring',
-            currentStepDescription: 'Zero active alerts detected across Prometheus, Datadog, Grafana and webhook feeds.',
-            proposedCommand: matchedExp.command,
-            riskLevel: matchedExp.riskLevel,
-            category: matchedExp.category === 'SAFE' ? 'SAFE' : 'DESTRUCTIVE',
-            nextStepLabel: 'Monitoring Nominal Baseline',
-            nextStepStatus: 'All Systems Nominal',
-            rootCause: matchedExp.rootCause,
-            recommendedAction: matchedExp.recommendedAction,
-            evidenceSources: matchedExp.evidenceSources,
-            terminalOutput: matchedExp.terminalOutput,
-            timeline: matchedExp.timeline,
-            postMortem: matchedExp.postMortem,
-          };
-        } else {
-          return {
-            ...prev,
-            incidentId: incidentId || prev.incidentId || matchedExp.id.replace('exp-', 'INC-2026-0824-'),
-            title: `${matchedExp.service.toUpperCase()} — ${matchedExp.title}`,
-            service: matchedExp.service,
-            severity: matchedExp.severity,
-            status: 'OPEN',
-            timeAgo: 'Just now',
-            description: matchedExp.description,
-            confidence: matchedExp.confidence,
-            sopMatched: matchedExp.sop,
-            rootCause: matchedExp.rootCause,
-            recommendedAction: matchedExp.recommendedAction,
-            evidenceSources: matchedExp.evidenceSources,
-            proposedCommand: matchedExp.command,
-            riskLevel: matchedExp.riskLevel,
-            blastRadius: matchedExp.blastRadius,
-            currentStepIndex: 3,
-            steps: [
-              { id: 1, label: 'Ingest', sublabel: '11:24:03', time: '11:24:03', status: 'completed' },
-              { id: 2, label: 'Vector', sublabel: '11:24:04', time: '11:24:04', status: 'completed' },
-              { id: 3, label: 'Triage', sublabel: '11:24:05', time: '11:24:05', status: 'completed' },
-              { id: 4, label: 'Guardrail', sublabel: '11:24:06', time: '11:24:06', status: 'active' },
-              { id: 5, label: 'Execute', sublabel: 'Pending', time: 'Pending', status: 'pending' },
-              { id: 6, label: 'Verify', sublabel: 'Pending', time: 'Pending', status: 'pending' },
-            ],
-            currentStepName: 'Deterministic Safety Guardrail Policy',
-            currentStepDescription: 'Evaluating proposed remediation command against zero-blast-radius execution rules...',
-            nextStepLabel: matchedExp.nextStep,
-            nextStepStatus: 'Automated Authorization Granted',
-            category: matchedExp.category === 'SAFE' ? 'SAFE' : 'DESTRUCTIVE',
-            terminalOutput: matchedExp.terminalOutput,
-            timeline: matchedExp.timeline,
-            postMortem: matchedExp.postMortem,
-          };
-        }
-      });
+    if (isAlertClosed) {
+      setActiveIncident(resolvedIncidentState);
+    } else if (incidentId) {
+      hydrateIncidentFromBackend(incidentId, matchedExp);
+    } else if (matchedExp) {
+      hydrateIncidentFromBackend(matchedExp.id.replace('exp-', 'INC-2026-0824-'), matchedExp);
     }
+  };
+
+  // Time range selector callback for SystemMetrics
+  const handleRangeChange = async (range: string) => {
+    setCurrentRange(range);
+    setIsLoadingMetrics(true);
+    try {
+      const data = await ApiService.getSLOMetrics(range);
+      if (data) {
+        setSloMetrics(data);
+      }
+    } catch (err) {
+      console.debug('Metrics range error:', err);
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  };
+
+  // Reset nominal state
+  const handleResetNominal = () => {
+    setActiveIncident(resolvedIncidentState);
+    setCurrentExperimentId('nominal');
+    ApiService.getSystemOverview().then(setSystemOverview).catch(() => {});
   };
 
   return (
@@ -287,10 +329,10 @@ export default function App() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           activeIncident={activeIncident}
-          onResetNominal={() => {
-            setActiveIncident(resolvedIncidentState);
-            setCurrentExperimentId('nominal');
-          }}
+          systemOverview={systemOverview}
+          isLoading={isLoadingInitial}
+          isBackendConnected={isBackendConnected}
+          onResetNominal={handleResetNominal}
         />
 
         {/* Dashboard Workspace Scrollable Container */}
@@ -307,12 +349,16 @@ export default function App() {
               {/* Card 1: System Service Topology */}
               <SystemTopology
                 activeIncident={activeIncident}
+                topologyData={topologyData || undefined}
+                isLoading={isLoadingInitial || isLoadingIncident}
                 onInvestigate={() => setIsDrawerOpen(true)}
               />
 
               {/* Card 2: Chaos Lab */}
               <ChaosLab
                 currentExperimentId={currentExperimentId}
+                isInjectingChaosId={isInjectingChaosId}
+                disabled={isLoadingIncident}
                 onTriggerExperiment={handleTriggerChaosExperiment}
               />
 
@@ -325,6 +371,7 @@ export default function App() {
                 />
                 <AITriageSummary
                   activeIncident={activeIncident}
+                  isLoading={isLoadingInitial || isLoadingIncident}
                   onOpenAnalysis={() => setIsDrawerOpen(true)}
                 />
               </div>
@@ -335,16 +382,23 @@ export default function App() {
               {/* Card 4: Active Incident Spotlight */}
               <ActiveIncidentCard
                 activeIncident={activeIncident}
+                isLoading={isLoadingInitial || isLoadingIncident}
                 onInvestigate={() => setIsDrawerOpen(true)}
               />
 
               {/* Card 5: SRE Pipeline Stepper */}
               <PipelineStepper
                 activeIncident={activeIncident}
+                isLoading={isLoadingInitial || isLoadingIncident}
               />
 
               {/* Card 6: System Metrics & MTTR */}
-              <SystemMetrics />
+              <SystemMetrics
+                sloMetrics={sloMetrics}
+                isLoading={isLoadingInitial || isLoadingMetrics}
+                currentRange={currentRange}
+                onRangeChange={handleRangeChange}
+              />
             </div>
           </div>
         </div>
@@ -355,7 +409,9 @@ export default function App() {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         activeIncident={activeIncident}
+        isLoadingPostMortem={isLoadingIncident}
       />
     </div>
   );
 }
+
