@@ -166,6 +166,17 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {alerts.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAlerts}
+              title="Clear all alerts from database"
+              className="px-1.5 py-0.5 text-slate-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded border border-slate-200 dark:border-white/[0.08] transition-colors cursor-pointer flex items-center gap-1 text-[10px]"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span className="font-mono text-[9px] font-semibold">Clear</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={fetchDynamicAlerts}
@@ -275,7 +286,9 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
 
       {/* Footer Info */}
       <div className="pt-2 mt-1 border-t border-[#E2E8F0] dark:border-white/[0.08] flex items-center justify-between text-[10px] text-[#64748B] dark:text-zinc-400">
-        <span className="font-mono">{alerts.length} alerts loaded from database</span>
+        <span className={`font-mono ${alerts.length === 0 ? 'text-[#16A34A] dark:text-emerald-400 font-semibold' : ''}`}>
+          {alerts.length} alerts loaded from database {alerts.length === 0 ? '· Nominal Baseline' : ''}
+        </span>
         <button
           type="button"
           onClick={onOpenDossier}
