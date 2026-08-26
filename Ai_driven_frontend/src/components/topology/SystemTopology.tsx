@@ -12,7 +12,6 @@ import {
   Server,
   ShieldCheck,
   Send,
-  Radio,
 } from 'lucide-react';
 import type { SystemTopologyProps } from '../../types';
 
@@ -433,24 +432,22 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathAlertToRag}
                 fill="none"
-                stroke={!isNominal ? 'url(#laserAI)' : '#CBD5E1'}
+                stroke={!isNominal ? 'url(#laserAI)' : 'url(#laserNominal)'}
                 strokeWidth={!isNominal ? '3.5' : '2'}
                 strokeDasharray="5 5"
-                className={!isNominal ? 'animate-laser-flow' : ''}
+                className="animate-laser-flow"
                 filter={!isNominal ? 'url(#glowEffect)' : undefined}
               />
+              <circle r={!isNominal ? '4.5' : '3'} fill={!isNominal ? '#8B5CF6' : '#10B981'}>
+                <animateMotion dur={!isNominal ? '0.75s' : '1.8s'} repeatCount="indefinite" path={pathAlertToRag} />
+              </circle>
               {!isNominal && (
-                <>
-                  <circle r="4.5" fill="#8B5CF6">
-                    <animateMotion dur="0.75s" repeatCount="indefinite" path={pathAlertToRag} />
-                  </circle>
-                  <circle r="3" fill="#C084FC">
-                    <animateMotion dur="0.75s" begin="0.37s" repeatCount="indefinite" path={pathAlertToRag} />
-                  </circle>
-                </>
+                <circle r="3" fill="#C084FC">
+                  <animateMotion dur="0.75s" begin="0.37s" repeatCount="indefinite" path={pathAlertToRag} />
+                </circle>
               )}
-              <circle cx="240" cy="183" r="3" fill={!isNominal ? '#8B5CF6' : '#94A3B8'} />
-              <circle cx="265" cy="183" r="3" fill={!isNominal ? '#8B5CF6' : '#94A3B8'} />
+              <circle cx="240" cy="183" r="3" fill={!isNominal ? '#8B5CF6' : '#10B981'} />
+              <circle cx="265" cy="183" r="3" fill={!isNominal ? '#8B5CF6' : '#10B981'} />
 
               {/* 5. Gemini RAG Agent -> Safety Guardrail (AST Verification Flow) */}
               <path
@@ -463,24 +460,22 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathRagToGuardrail}
                 fill="none"
-                stroke={!isNominal ? 'url(#laserGuardrail)' : '#CBD5E1'}
+                stroke={!isNominal ? 'url(#laserGuardrail)' : 'url(#laserNominal)'}
                 strokeWidth={!isNominal ? '3.5' : '2'}
                 strokeDasharray="5 5"
-                className={!isNominal ? 'animate-laser-flow' : ''}
+                className="animate-laser-flow"
                 filter={!isNominal ? 'url(#glowEffect)' : undefined}
               />
+              <circle r={!isNominal ? '4.5' : '3'} fill="#10B981">
+                <animateMotion dur={!isNominal ? '0.75s' : '1.8s'} repeatCount="indefinite" path={pathRagToGuardrail} />
+              </circle>
               {!isNominal && (
-                <>
-                  <circle r="4.5" fill="#10B981">
-                    <animateMotion dur="0.75s" repeatCount="indefinite" path={pathRagToGuardrail} />
-                  </circle>
-                  <circle r="3" fill="#6EE7B7">
-                    <animateMotion dur="0.75s" begin="0.37s" repeatCount="indefinite" path={pathRagToGuardrail} />
-                  </circle>
-                </>
+                <circle r="3" fill="#6EE7B7">
+                  <animateMotion dur="0.75s" begin="0.37s" repeatCount="indefinite" path={pathRagToGuardrail} />
+                </circle>
               )}
-              <circle cx="485" cy="183" r="3" fill={!isNominal ? '#10B981' : '#94A3B8'} />
-              <circle cx="510" cy="183" r="3" fill={!isNominal ? '#10B981' : '#94A3B8'} />
+              <circle cx="485" cy="183" r="3" fill={!isNominal ? '#10B981' : '#10B981'} />
+              <circle cx="510" cy="183" r="3" fill={!isNominal ? '#10B981' : '#10B981'} />
 
               {/* 6. Safety Guardrail -> Telegram Notifier (@AuroraSREBot Alert Push) */}
               <path
@@ -493,24 +488,22 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathGuardrailToTelegram}
                 fill="none"
-                stroke={!isNominal ? 'url(#laserTelegram)' : '#CBD5E1'}
+                stroke={!isNominal ? 'url(#laserTelegram)' : 'url(#laserNominal)'}
                 strokeWidth={!isNominal ? '4' : '2'}
                 strokeDasharray="5 5"
-                className={!isNominal ? 'animate-laser-flow' : ''}
+                className="animate-laser-flow"
                 filter={!isNominal ? 'url(#glowEffect)' : undefined}
               />
+              <circle r={!isNominal ? '5' : '3'} fill={!isNominal ? '#0EA5E9' : '#10B981'}>
+                <animateMotion dur={!isNominal ? '0.65s' : '1.8s'} repeatCount="indefinite" path={pathGuardrailToTelegram} />
+              </circle>
               {!isNominal && (
-                <>
-                  <circle r="5" fill="#0EA5E9">
-                    <animateMotion dur="0.65s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
-                  </circle>
-                  <circle r="3.5" fill="#7DD3FC">
-                    <animateMotion dur="0.65s" begin="0.32s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
-                  </circle>
-                </>
+                <circle r="3.5" fill="#7DD3FC">
+                  <animateMotion dur="0.65s" begin="0.32s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
+                </circle>
               )}
-              <circle cx="730" cy="183" r="3.5" fill={!isNominal ? '#0EA5E9' : '#94A3B8'} />
-              <circle cx="755" cy="183" r="3.5" fill={!isNominal ? '#0EA5E9' : '#94A3B8'} />
+              <circle cx="730" cy="183" r="3.5" fill={!isNominal ? '#0EA5E9' : '#10B981'} />
+              <circle cx="755" cy="183" r="3.5" fill={!isNominal ? '#0EA5E9' : '#10B981'} />
 
               {/* 7. Remediation Feedback Loop: Safety Guardrail -> Checkout Service */}
               {currentStep >= 4 && (
@@ -604,7 +597,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                             : isAct && node.id === 'telegram-notifier'
                             ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
-                            : isAct
+                            : isAct && node.id === 'rag-ai-agent'
                             ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
                             : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300'
                         }`}
