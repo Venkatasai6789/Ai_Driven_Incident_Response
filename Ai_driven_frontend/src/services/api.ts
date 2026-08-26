@@ -114,6 +114,20 @@ export const ApiService = {
     return apiRequest<TelemetryAlertItem[]>(`/api/v1/alerts${queryString}`);
   },
 
+  // Clear all Alerts
+  clearAlerts: async () => {
+    return apiRequest<{ success: boolean; deleted_count: number; message: string }>('/api/v1/alerts', {
+      method: 'DELETE',
+    });
+  },
+
+  // Reset entire system to 0 errors nominal baseline
+  resetSystemNominal: async () => {
+    return apiRequest<{ success: boolean; message: string }>('/api/v1/system/reset', {
+      method: 'POST',
+    });
+  },
+
   // Active Incident State
   getActiveIncident: async () => {
     return apiRequest<{

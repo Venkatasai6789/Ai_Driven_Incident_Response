@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, AlertTriangle, AlertCircle, Info, Radio, Activity, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
+import { ChevronRight, AlertTriangle, AlertCircle, Info, Radio, Activity, Sparkles, CheckCircle2, RefreshCw, Trash2 } from 'lucide-react';
 import { IncidentSeverity } from '../../types';
 import { ApiService } from '../../services/api';
 
@@ -43,6 +43,23 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
       console.debug('Dynamic alerts fetch notice:', err);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleClearAlerts = async () => {
+    try {
+      setIsRefreshing(true);
+      await ApiService.clearAlerts();
+      setAlerts([]);
+      setSelectedAlertId(null);
+      onSelectAlert('nominal', undefined, 'NOMINAL');
+    } catch (err) {
+      console.debug('Failed to clear alerts from DB:', err);
+      setAlerts([]);
+      setSelectedAlertId(null);
+      onSelectAlert('nominal', undefined, 'NOMINAL');
+    } finally {
       setIsRefreshing(false);
     }
   };

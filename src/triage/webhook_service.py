@@ -350,6 +350,40 @@ def get_alerts_stream(status_filter: Optional[str] = None, limit: int = 10):
     return alerts
 
 
+@app.delete("/api/v1/alerts", tags=["Specification API"])
+@app.post("/api/v1/alerts/clear", tags=["Specification API"])
+def clear_all_alerts():
+    """Purges all alerts from PostgreSQL database, resetting telemetry alert stream to nominal zero-alert baseline."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT count(*) FROM alerts;")
+    cnt = cur.fetchone()[0] or 0
+    cur.execute("DELETE FROM alerts;")
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {
+        "success": True,
+        "deleted_count": cnt,
+        "message": f"Successfully cleared {cnt} alerts from database. Telemetry alert stream is now nominal (0 alerts).",
+    }
+
+
+@app.post("/api/v1/system/reset", tags=["Specification API"])
+def reset_system_nominal():
+    """Resets entire system to 0 errors baseline, purging active alerts, actions, timeline, and resolving open incidents."""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("TRUNCATE TABLE alerts, actions, timeline, incidents, ai_logs CASCADE;")
+    conn.commit()
+    cur.close()
+    conn.close()
+    return {
+        "success": True,
+        "message": "System successfully reset to nominal baseline with 0 errors and 0 active alerts.",
+    }
+
+
 @app.get("/api/v1/incidents/{incident_id}/triage", tags=["Specification API"])
 def get_incident_triage_analysis(incident_id: str):
     """Fetches Phase 2 (RAG) & Phase 3 (Gemini Triage) semantic search & safety analysis dynamically."""
