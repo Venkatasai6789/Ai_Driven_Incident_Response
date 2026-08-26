@@ -374,6 +374,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
   const lineAlertToRag = `M ${getRightPort('alert-webhook').x} ${getRightPort('alert-webhook').y} L ${getLeftPort('rag-ai-agent').x} ${getLeftPort('rag-ai-agent').y}`;
   const lineRagToGuardrail = `M ${getRightPort('rag-ai-agent').x} ${getRightPort('rag-ai-agent').y} L ${getLeftPort('fastapi-dispatcher').x} ${getLeftPort('fastapi-dispatcher').y}`;
 
+  const lineCheckoutToAlert = `M ${getBottomPort('checkout-service').x} ${getBottomPort('checkout-service').y} L ${getTopPort('alert-webhook').x} ${getTopPort('alert-webhook').y}`;
+  const lineAlertToAi = lineAlertToRag;
+  const lineAiToSafety = lineRagToGuardrail;
+  const lineSafetyToTarget = `M ${getTopPort('fastapi-dispatcher').x} ${getTopPort('fastapi-dispatcher').y} L ${getBottomPort('checkout-service').x} ${getBottomPort('checkout-service').y}`;
+  const linePipelineAlertToAi = `M ${getRightPort('alert-webhook').x} ${getRightPort('alert-webhook').y} L ${getLeftPort('rag-ai-agent').x} ${getLeftPort('rag-ai-agent').y}`;
+  const linePipelineAiToSafety = `M ${getRightPort('rag-ai-agent').x} ${getRightPort('rag-ai-agent').y} L ${getLeftPort('fastapi-dispatcher').x} ${getLeftPort('fastapi-dispatcher').y}`;
+
+
   const renderNodeIcon = (iconType: ServiceNodeDefinition['iconType'], status: string) => {
     const isCrit = status === 'CRITICAL';
     const isDeg = status === 'DEGRADED';
