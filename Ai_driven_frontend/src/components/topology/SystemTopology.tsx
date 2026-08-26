@@ -180,15 +180,16 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
   }, [isExpanded]);
 
   // Determine active incident details
-  const incidentService = activeIncident ? activeIncident.service : null;
-  const incidentSeverity = activeIncident ? activeIncident.severity : 'NOMINAL';
-  const currentStep = activeIncident?.currentStepIndex ?? -1;
+  const isNominal = !activeIncident || activeIncident.incidentId === 'INC-NOMINAL-000' || activeIncident.incidentId === 'nominal' || activeIncident.title.includes('Operational');
+  const incidentService = isNominal ? null : (activeIncident ? activeIncident.service : null);
+  const incidentSeverity = isNominal ? 'NOMINAL' : (activeIncident ? activeIncident.severity : 'NOMINAL');
+  const currentStep = isNominal ? -1 : (activeIncident?.currentStepIndex ?? -1);
 
-  const isIngestActive = currentStep === 0;
-  const isTriageActive = currentStep === 1 || currentStep === 2;
-  const isSafetyActive = currentStep === 3;
-  const isGateActive = currentStep === 4;
-  const isVerifyActive = currentStep === 5;
+  const isIngestActive = !isNominal && currentStep === 0;
+  const isTriageActive = !isNominal && (currentStep === 1 || currentStep === 2);
+  const isSafetyActive = !isNominal && currentStep === 3;
+  const isGateActive = !isNominal && currentStep === 4;
+  const isVerifyActive = !isNominal && currentStep === 5;
 
   // Helper to dynamically calculate node status & positioning based on viewMode
   const getNodeState = (node: ServiceNodeDefinition) => {

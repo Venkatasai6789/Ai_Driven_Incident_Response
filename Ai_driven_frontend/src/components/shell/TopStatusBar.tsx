@@ -13,11 +13,12 @@ export const TopStatusBar: React.FC<TopStatusBarProps> = ({
   activeIncident,
   onResetNominal,
 }) => {
-  const isCritical = activeIncident?.severity === 'CRITICAL';
-  const isHigh = activeIncident?.severity === 'HIGH';
-  const isMedium = activeIncident?.severity === 'MEDIUM';
-  const isLow = activeIncident?.severity === 'LOW';
-  const hasIncident = !!activeIncident;
+  const isNominal = !activeIncident || activeIncident.incidentId === 'INC-NOMINAL-000' || activeIncident.incidentId === 'nominal' || activeIncident.title.includes('Operational');
+  const isCritical = !isNominal && activeIncident?.severity === 'CRITICAL';
+  const isHigh = !isNominal && activeIncident?.severity === 'HIGH';
+  const isMedium = !isNominal && activeIncident?.severity === 'MEDIUM';
+  const isLow = !isNominal && activeIncident?.severity === 'LOW';
+  const hasIncident = !isNominal;
 
   return (
     <header

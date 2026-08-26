@@ -14,8 +14,8 @@ import { ChaosExperiment, ActiveIncidentState } from './types';
 import { ApiService, API_BASE_URL } from './services/api';
 
 export default function App() {
-  const [activeIncident, setActiveIncident] = useState<ActiveIncidentState>(defaultOOMIncident);
-  const [currentExperimentId, setCurrentExperimentId] = useState<string>('exp-oom');
+  const [activeIncident, setActiveIncident] = useState<ActiveIncidentState>(resolvedIncidentState);
+  const [currentExperimentId, setCurrentExperimentId] = useState<string>('nominal');
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
@@ -32,12 +32,34 @@ export default function App() {
 
   // Connect to live WebSocket events stream from backend
   useEffect(() => {
+    // Check if backend has an ongoing incident
+    ApiService.getActiveIncident()
+      .then((data) => {
+        if (data && data.incident_id && data.service && data.service !== 'nominal') {
+          const matchedExp = chaosExperiments.find(
+            (e) => e.service === data.service || (data.service === 'checkout-service' && e.type === 'oom')
+          );
+          if (matchedExp) {
+            handleTriggerExperiment(matchedExp);
+          }
+        }
+      })
+      .catch(() => {
+        // Backend offline or quiet fallback
+      });
+
     const ws = ApiService.connectWebSocket(
       (data) => {
-        if (data && data.event === 'alert' && data.payload) {
-          console.log('[Live SRE Stream] New Alert received:', data.payload);
-        } else if (data && data.event === 'incident_update') {
-          console.log('[Live SRE Stream] Incident update:', data);
+        if (data && (data.event === 'alert' || data.event_type === 'ALERT_RECEIVED' || data.event_type === 'INCIDENT_TRIAGED')) {
+          const payload = data.payload || {};
+          const service = payload.service || 'checkout-service';
+          const matchedExp = chaosExperiments.find(
+            (e) => e.service === service || (service === 'checkout-service' && e.type === 'oom')
+          ) || chaosExperiments[0];
+
+          if (matchedExp) {
+            handleTriggerExperiment(matchedExp);
+          }
         }
       },
       (connected) => {

@@ -213,7 +213,7 @@ def get_service_mesh_topology():
 
 
 @app.post("/api/v1/chaos/inject", tags=["Specification API"])
-def inject_chaos_experiment(req: ChaosInjectRequest):
+async def inject_chaos_experiment(req: ChaosInjectRequest):
     """Triggers a synthetic chaos failure in the cluster, evaluates safety guardrails, and sends Telegram approval requests."""
     try:
         res = chaos_controller.inject_chaos(
@@ -239,6 +239,24 @@ def inject_chaos_experiment(req: ChaosInjectRequest):
                 dry_run=req.dry_run,
             )
             res["remediation_proposed"] = rem_res
+
+        # Broadcast real-time incident event to all connected dashboard WebSocket clients
+        try:
+            target_svc = req.target_service or res.get("target_service") or "checkout-service"
+            await ws_manager.broadcast_event(
+                event_type="ALERT_RECEIVED",
+                incident_id=incident_id or f"INC-{req.experiment_id}",
+                stage="TRIAGE",
+                step_index=2,
+                payload={
+                    "service": target_svc,
+                    "severity": "CRITICAL" if req.experiment_id in ("exp-oom", "exp-db") else "HIGH",
+                    "scenario": res.get("scenario", "Chaos Simulation"),
+                    "experiment_id": req.experiment_id,
+                }
+            )
+        except Exception as ws_err:
+            print(f"[!] WebSocket broadcast warning: {ws_err}")
 
         return res
     except ValueError as ve:
@@ -707,6 +725,25 @@ async def receive_alerts(request: Request):
     for alert in normalized_alerts:
         result = classifier.process_alert(alert)
         results.append(result)
+
+        # Broadcast live alert to all connected dashboard WebSocket clients
+        try:
+            await ws_manager.broadcast_event(
+                event_type="ALERT_RECEIVED",
+                incident_id=result.incident_id or f"INC-{uuid.uuid4().hex[:8]}",
+                stage="TRIAGE",
+                step_index=2,
+                payload={
+                    "service": alert.service,
+                    "severity": result.classification.severity,
+                    "alert_name": alert.alert_name,
+                    "description": alert.description,
+                    "sopMatched": result.classification.recommended_runbook_title or "SOP Runbook",
+                    "confidence": result.classification.confidence_score,
+                }
+            )
+        except Exception as ws_err:
+            print(f"[!] WebSocket broadcast warning: {ws_err}")
 
     return results
 
