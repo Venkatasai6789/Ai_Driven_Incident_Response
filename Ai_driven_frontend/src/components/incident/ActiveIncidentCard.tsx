@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Clock, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, Clock, ArrowUpRight, CheckCircle2, ShieldCheck, Activity, Cpu } from 'lucide-react';
 import { ActiveIncidentState } from '../../types';
 
 interface ActiveIncidentCardProps {
@@ -40,27 +40,35 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
           <h2 className="text-[12px] font-bold text-[#111312] dark:text-white tracking-wider uppercase">
             {isClosed ? 'INCIDENT MONITOR' : 'ACTIVE INCIDENT MONITOR'}
           </h2>
+          {isClosed && (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Probing Active
+            </span>
+          )}
         </div>
 
-        <button
-          id="view-incident-details-link"
-          disabled={isLoading}
-          onClick={onInvestigate}
-          className={`text-[11px] font-semibold text-[#15803D] dark:text-emerald-400 hover:underline transition-colors ${
-            isLoading ? 'opacity-50 cursor-wait' : 'cursor-pointer'
-          }`}
-        >
-          View Post-Mortem
-        </button>
+        {!isClosed && (
+          <button
+            id="view-incident-details-link"
+            disabled={isLoading}
+            onClick={onInvestigate}
+            className={`text-[11px] font-semibold text-[#15803D] dark:text-emerald-400 hover:underline transition-colors ${
+              isLoading ? 'opacity-50 cursor-wait' : 'cursor-pointer'
+            }`}
+          >
+            View Post-Mortem
+          </button>
+        )}
       </div>
 
       {/* Incident Box Container */}
       <div
-        className={`rounded-xl p-3 flex flex-col gap-2 transition-all ${
+        className={`rounded-xl p-3.5 flex flex-col gap-2.5 transition-all ${
           isLoading
             ? 'border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0E121B]'
             : isClosed
-            ? 'border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0E121B]'
+            ? 'border border-emerald-100 dark:border-emerald-950/40 bg-gradient-to-br from-emerald-50/40 via-white to-slate-50/50 dark:from-emerald-950/20 dark:via-[#090C14] dark:to-[#0E121B]'
             : isCritical
             ? 'border border-[#FDA4AF] dark:border-rose-900/50 bg-[#FFF5F5] dark:bg-rose-950/20'
             : isHigh
@@ -102,33 +110,77 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
             {/* CTA Button Skeleton */}
             <div className="w-full h-7 rounded-lg skeleton-shimmer mt-0.5" />
           </div>
+        ) : isClosed ? (
+          /* Nominal Standby State (Clean, Professional, Zero Mock Clutter) */
+          <div className="flex flex-col gap-2.5">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 px-2.5 py-0.8 rounded-md bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[10.5px] font-bold font-mono border border-emerald-200 dark:border-emerald-800/50">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                NOMINAL · 0 ACTIVE INCIDENTS
+              </span>
+              <div className="flex items-center gap-1 text-[10.5px] text-slate-500 dark:text-zinc-400 font-mono">
+                <Clock className="w-3 h-3 text-slate-400 dark:text-zinc-500" />
+                <span>Live Feed</span>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[13px] font-bold text-slate-900 dark:text-white leading-snug">
+                All Systems & Microservices Operational
+              </h3>
+              <p className="text-[11px] text-slate-600 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                Envoy ingress proxy, worker pods, and PostgreSQL state connections are operating cleanly within nominal SLO boundaries.
+              </p>
+            </div>
+
+            {/* 3 Standby Status Chips */}
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <div className="bg-white/80 dark:bg-[#131826]/80 border border-slate-200/80 dark:border-white/[0.06] rounded-lg p-2 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-medium leading-tight truncate">Cluster Mesh</span>
+                  <span className="text-[10.5px] font-bold text-slate-800 dark:text-zinc-200 font-mono leading-tight">100% Healthy</span>
+                </div>
+              </div>
+
+              <div className="bg-white/80 dark:bg-[#131826]/80 border border-slate-200/80 dark:border-white/[0.06] rounded-lg p-2 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-medium leading-tight truncate">pgvector SOPs</span>
+                  <span className="text-[10.5px] font-bold text-slate-800 dark:text-zinc-200 font-mono leading-tight">Synchronized</span>
+                </div>
+              </div>
+
+              <div className="bg-white/80 dark:bg-[#131826]/80 border border-slate-200/80 dark:border-white/[0.06] rounded-lg p-2 flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[9px] text-slate-400 dark:text-zinc-500 font-medium leading-tight truncate">AST Guardrail</span>
+                  <span className="text-[10.5px] font-bold text-slate-800 dark:text-zinc-200 font-mono leading-tight">Enforced</span>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
+          /* Active Incident Spotlight (When real incident in flight) */
           <>
-            {/* Top Row: Status / Severity Badge + ID + Time */}
+            {/* Top Row: Severity Badge + ID + Time */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isClosed ? (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-bold border border-slate-300 dark:border-zinc-700 font-mono">
-                    <CheckCircle2 className="w-3 h-3 text-slate-600 dark:text-zinc-400" />
-                    CLOSED
-                  </span>
-                ) : (
-                  <span
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold font-mono ${
-                      isCritical
-                        ? 'bg-[#FFE4E6] dark:bg-rose-950/60 text-[#E11D48] dark:text-rose-400 border border-transparent dark:border-rose-800/40'
-                        : isHigh
-                        ? 'bg-[#FEF3C7] dark:bg-amber-950/60 text-[#D97706] dark:text-amber-400 border border-transparent dark:border-amber-800/40'
-                        : 'bg-[#E0F2FE] dark:bg-sky-950/60 text-[#0284C7] dark:text-sky-400 border border-transparent dark:border-sky-800/40'
-                    }`}
-                  >
-                    <AlertTriangle className="w-3 h-3" />
-                    {activeIncident.severity}
-                  </span>
-                )}
+                <span
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold font-mono ${
+                    isCritical
+                      ? 'bg-[#FFE4E6] dark:bg-rose-950/60 text-[#E11D48] dark:text-rose-400 border border-transparent dark:border-rose-800/40'
+                      : isHigh
+                      ? 'bg-[#FEF3C7] dark:bg-amber-950/60 text-[#D97706] dark:text-amber-400 border border-transparent dark:border-amber-800/40'
+                      : 'bg-[#E0F2FE] dark:bg-sky-950/60 text-[#0284C7] dark:text-sky-400 border border-transparent dark:border-sky-800/40'
+                  }`}
+                >
+                  <AlertTriangle className="w-3 h-3" />
+                  {activeIncident.severity}
+                </span>
 
                 <span className="text-[11px] font-mono font-bold text-[#111312] dark:text-zinc-200">
-                  {activeIncident.incidentId || 'INC-NOMINAL-000'}
+                  {activeIncident.incidentId}
                 </span>
               </div>
 

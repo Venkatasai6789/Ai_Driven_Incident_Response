@@ -303,10 +303,17 @@ export default function App() {
   };
 
   // Reset nominal state
-  const handleResetNominal = () => {
+  const handleResetNominal = async () => {
     setActiveIncident(resolvedIncidentState);
     setCurrentExperimentId('nominal');
+    try {
+      await ApiService.resetSystemNominal();
+    } catch (e) {
+      console.debug('Reset nominal API notice:', e);
+    }
     ApiService.getSystemOverview().then(setSystemOverview).catch(() => {});
+    ApiService.getSLOMetrics(currentRange).then(setSloMetrics).catch(() => {});
+    ApiService.getTopologyMesh().then(setTopologyData).catch(() => {});
   };
 
   return (
