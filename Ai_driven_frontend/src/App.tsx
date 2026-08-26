@@ -373,7 +373,6 @@ export default function App() {
           isBackendConnected={isBackendConnected}
           onResetNominal={handleResetNominal}
         />
-
         {/* Dashboard Workspace Scrollable Container */}
         <div
           id="dashboard-grid-container"
@@ -381,10 +380,10 @@ export default function App() {
         >
           <div
             id="dashboard-grid"
-            className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 max-w-[1920px] w-full mx-auto"
+            className="flex flex-col gap-3.5 max-w-[1920px] w-full mx-auto"
           >
-            {/* Top Full-Width Section: System Service Topology Mesh */}
-            <div className="col-span-12">
+            {/* 1. Top Full-Width Section: System Service Topology Mesh */}
+            <div className="w-full" id="topology-section">
               <SystemTopology
                 activeIncident={activeIncident}
                 topologyData={topologyData || undefined}
@@ -393,23 +392,26 @@ export default function App() {
               />
             </div>
 
-            {/* Left Column (Chaos Lab, Alert Stream 3A + AI Triage 3B) */}
-            <div className="lg:col-span-7 flex flex-col gap-3.5">
-              {/* Card 2: Chaos Lab */}
+            {/* 2. Full-Width Section: Fault Injection Suite (Chaos Lab) */}
+            <div className="w-full" id="chaos-suite-section">
               <ChaosLab
                 currentExperimentId={currentExperimentId}
                 isInjectingChaosId={isInjectingChaosId}
                 disabled={isLoadingIncident}
                 onTriggerExperiment={handleTriggerChaosExperiment}
               />
+            </div>
 
-              {/* Bottom Split Row: Card 3A (Alerts) & Card 3B (Triage Summary) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                <ActiveAlertStream
-                  currentExperimentId={currentExperimentId}
-                  onSelectAlert={handleSelectAlertById}
-                  onOpenDossier={() => setIsDrawerOpen(true)}
+            {/* 3. Row 1: Symmetrical Equal-Height Columns (Active Incident Spotlight & AI Root Cause Diagnostics) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch" id="incident-triage-row">
+              <div className="flex flex-col h-full">
+                <ActiveIncidentCard
+                  activeIncident={activeIncident}
+                  isLoading={isLoadingInitial || isLoadingIncident}
+                  onInvestigate={() => setIsDrawerOpen(true)}
                 />
+              </div>
+              <div className="flex flex-col h-full">
                 <AITriageSummary
                   activeIncident={activeIncident}
                   isLoading={isLoadingInitial || isLoadingIncident}
@@ -418,22 +420,25 @@ export default function App() {
               </div>
             </div>
 
-            {/* Right Column (Active Incident, Pipeline Stepper, System Metrics) */}
-            <div className="lg:col-span-5 flex flex-col gap-3.5">
-              {/* Card 4: Active Incident Spotlight */}
-              <ActiveIncidentCard
-                activeIncident={activeIncident}
-                isLoading={isLoadingInitial || isLoadingIncident}
-                onInvestigate={() => setIsDrawerOpen(true)}
-              />
+            {/* 4. Row 2: Symmetrical Equal-Height Columns (Live Telemetry Alerts & Autonomous Remediation Pipeline) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch" id="telemetry-pipeline-row">
+              <div className="flex flex-col h-full">
+                <ActiveAlertStream
+                  currentExperimentId={currentExperimentId}
+                  onSelectAlert={handleSelectAlertById}
+                  onOpenDossier={() => setIsDrawerOpen(true)}
+                />
+              </div>
+              <div className="flex flex-col h-full">
+                <PipelineStepper
+                  activeIncident={activeIncident}
+                  isLoading={isLoadingInitial || isLoadingIncident}
+                />
+              </div>
+            </div>
 
-              {/* Card 5: SRE Pipeline Stepper */}
-              <PipelineStepper
-                activeIncident={activeIncident}
-                isLoading={isLoadingInitial || isLoadingIncident}
-              />
-
-              {/* Card 6: System Metrics & MTTR */}
+            {/* 5. Bottom Full-Width Section: Platform SLO & MTTR Resolution Metrics */}
+            <div className="w-full" id="platform-metrics-section">
               <SystemMetrics
                 sloMetrics={sloMetrics}
                 isLoading={isLoadingInitial || isLoadingMetrics}

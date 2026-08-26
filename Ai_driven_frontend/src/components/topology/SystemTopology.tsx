@@ -80,15 +80,17 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
         ? activeIncident?.severity === 'CRITICAL'
           ? 'CRITICAL'
           : 'DEGRADED'
+        : incidentService === 'postgresql'
+        ? 'DEGRADED'
         : 'NOMINAL',
-      latency: isNominal ? 18 : 2840,
+      latency: isNominal ? 18 : incidentService === 'checkout-service' ? 2840 : 450,
       protocol: 'gRPC / HTTP 2',
       throughput: isNominal ? '3,210 rps' : '140 rps',
-      baseResource: isNominal ? '42% CPU' : '98% Memory',
+      baseResource: isNominal ? '42% CPU' : incidentService === 'checkout-service' ? '98% Memory' : '65% CPU',
       baseUptime: isNominal ? '99.95%' : '84.2%',
-      errorRate: isNominal ? '0.00%' : '38.4%',
+      errorRate: isNominal ? '0.00%' : incidentService === 'checkout-service' ? '38.4%' : '8.5%',
       namespace: 'workloads',
-      subTag: isNominal ? 'Nominal (18ms)' : 'DEGRADED · 2840ms',
+      subTag: isNominal ? 'Nominal (18ms)' : incidentService === 'checkout-service' ? 'CRITICAL · 2840ms' : 'DEGRADED · 450ms',
       leftPercent: '36%',
       topPx: 16,
       widthPercent: '28%',
@@ -106,14 +108,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
         : incidentService === 'checkout-service'
         ? 'DEGRADED'
         : 'NOMINAL',
-      latency: isNominal ? 6 : 142,
+      latency: isNominal ? 6 : incidentService === 'postgresql' ? 142 : 28,
       protocol: 'TCP / PgBouncer',
       throughput: '1,850 qps',
-      baseResource: isNominal ? '31% CPU' : '94% CPU',
+      baseResource: isNominal ? '31% CPU' : incidentService === 'postgresql' ? '94% CPU' : '45% CPU',
       baseUptime: '99.99%',
-      errorRate: isNominal ? '0.00%' : '14.2%',
+      errorRate: isNominal ? '0.00%' : incidentService === 'postgresql' ? '14.2%' : '0.00%',
       namespace: 'database',
-      subTag: isNominal ? 'Nominal (6ms)' : 'DEGRADED · 142ms',
+      subTag: isNominal ? 'Nominal (6ms)' : incidentService === 'postgresql' ? 'CRITICAL · 142ms' : 'DEGRADED · 28ms',
       leftPercent: '70%',
       topPx: 16,
       widthPercent: '28%',
@@ -210,6 +212,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
   const pathGwToCheckout = 'M 300 57 L 360 57';
   const pathCheckoutToDb = 'M 640 57 L 700 57';
   const pathCheckoutToAlert = 'M 500 98 C 500 126, 130 116, 130 142';
+  const pathDbToAlert = 'M 840 98 C 840 135, 130 116, 130 142';
   const pathAlertToRag = 'M 240 183 L 265 183';
   const pathRagToGuardrail = 'M 485 183 L 510 183';
   const pathGuardrailToTelegram = 'M 730 183 L 755 183';
@@ -270,7 +273,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
           {!isNominal ? (
             <span className="px-3 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-mono font-bold flex items-center gap-1.5 animate-pulse shadow-xs">
               <Flame className="w-3.5 h-3.5 text-rose-500" />
-              <span>Incident Alert Active</span>
+              <span>Incident Alert Active ({incidentService || 'workloads'})</span>
             </span>
           ) : (
             <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs">
@@ -390,9 +393,9 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <circle cx="640" cy="57" r="2.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'} />
               <circle cx="700" cy="57" r="2.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'} />
 
-              {/* 3. Incident Telemetry Conduit: Checkout -> Alert Webhook */}
+              {/* 3. Incident Telemetry Conduit: Checkout or Postgres -> Alert Webhook */}
               <path
-                d={pathCheckoutToAlert}
+                d={incidentService === 'postgresql' ? pathDbToAlert : pathCheckoutToAlert}
                 fill="none"
                 stroke="#CBD5E1"
                 strokeWidth="2"
@@ -402,24 +405,24 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               {!isNominal && (
                 <>
                   <path
-                    d={pathCheckoutToAlert}
+                    d={incidentService === 'postgresql' ? pathDbToAlert : pathCheckoutToAlert}
                     fill="none"
                     stroke="url(#laserCritical)"
-                    strokeWidth="3"
+                    strokeWidth="3.5"
                     strokeDasharray="5 5"
                     className="animate-laser-flow"
                     filter="url(#glowEffect)"
                   />
-                  <circle r="4" fill="#EF4444">
-                    <animateMotion dur="0.9s" repeatCount="indefinite" path={pathCheckoutToAlert} />
+                  <circle r="4.5" fill="#EF4444">
+                    <animateMotion dur="0.85s" repeatCount="indefinite" path={incidentService === 'postgresql' ? pathDbToAlert : pathCheckoutToAlert} />
                   </circle>
-                  <circle r="2.5" fill="#F87171">
-                    <animateMotion dur="0.9s" begin="0.45s" repeatCount="indefinite" path={pathCheckoutToAlert} />
+                  <circle r="3" fill="#F87171">
+                    <animateMotion dur="0.85s" begin="0.42s" repeatCount="indefinite" path={incidentService === 'postgresql' ? pathDbToAlert : pathCheckoutToAlert} />
                   </circle>
                 </>
               )}
-              <circle cx="500" cy="98" r="3" fill={!isNominal ? '#EF4444' : '#94A3B8'} />
-              <circle cx="130" cy="142" r="3" fill={!isNominal ? '#EF4444' : '#94A3B8'} />
+              <circle cx={incidentService === 'postgresql' ? '840' : '500'} cy="98" r="3.5" fill={!isNominal ? '#EF4444' : '#94A3B8'} />
+              <circle cx="130" cy="142" r="3.5" fill={!isNominal ? '#EF4444' : '#94A3B8'} />
 
               {/* 4. Alert Ingest -> Gemini RAG Agent (Live SOP Vector Search Flow) */}
               <path
