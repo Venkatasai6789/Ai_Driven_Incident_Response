@@ -11,12 +11,14 @@ import { SystemMetrics } from './components/metrics/SystemMetrics';
 import { PostMortemDrawer } from './components/drawer/PostMortemDrawer';
 import { defaultOOMIncident, chaosExperiments, resolvedIncidentState } from './data/mockIncidents';
 import { ChaosExperiment, ActiveIncidentState } from './types';
+import { ApiService, API_BASE_URL } from './services/api';
 
 export default function App() {
   const [activeIncident, setActiveIncident] = useState<ActiveIncidentState>(defaultOOMIncident);
   const [currentExperimentId, setCurrentExperimentId] = useState<string>('exp-oom');
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isBackendConnected, setIsBackendConnected] = useState<boolean>(false);
   
   // Theme state with localStorage persistence
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -28,6 +30,26 @@ export default function App() {
   // Left sidebar expanded/collapsed state
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(false);
 
+  // Connect to live WebSocket events stream from backend
+  useEffect(() => {
+    const ws = ApiService.connectWebSocket(
+      (data) => {
+        if (data && data.event === 'alert' && data.payload) {
+          console.log('[Live SRE Stream] New Alert received:', data.payload);
+        } else if (data && data.event === 'incident_update') {
+          console.log('[Live SRE Stream] Incident update:', data);
+        }
+      },
+      (connected) => {
+        setIsBackendConnected(connected);
+      }
+    );
+
+    return () => {
+      ws.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     if (isDark) {
       document.documentElement.classList.add('dark');
@@ -38,9 +60,19 @@ export default function App() {
     }
   }, [isDark]);
 
-  // Triggering a chaos experiment updates the entire reactive control plane
-  const handleTriggerExperiment = (exp: ChaosExperiment) => {
+  // Triggering a chaos experiment updates the entire reactive control plane and informs the backend
+  const handleTriggerExperiment = async (exp: ChaosExperiment) => {
     setCurrentExperimentId(exp.id);
+
+    // Call backend chaos injection API asynchronously
+    try {
+      ApiService.injectChaos(exp.id).catch((err) => {
+        // Backend optional / offline fallback
+        console.debug('Chaos API call finished:', err?.message || err);
+      });
+    } catch {
+      // Offline fallback
+    }
 
     const updatedIncident: ActiveIncidentState = {
       incidentId: `INC-2026-0824-${Math.floor(100 + Math.random() * 900)}`,
