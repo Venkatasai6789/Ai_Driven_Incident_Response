@@ -12,6 +12,7 @@ import {
   Server,
   ShieldCheck,
   Send,
+  Radio,
 } from 'lucide-react';
 import type { SystemTopologyProps } from '../../types';
 
@@ -28,6 +29,7 @@ interface MeshNode {
   baseUptime: string;
   errorRate: string;
   namespace: string;
+  subTag: string;
   leftPercent: string;
   topPx: number;
   widthPercent: string;
@@ -48,7 +50,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
 
   // 7 Application Architecture Nodes with responsive percentage positioning
   const nodes: MeshNode[] = [
-    // Top Row: Core Workloads (3 Nodes)
+    // Top Row: Workload Layer (3 Nodes)
     {
       id: 'api-gateway',
       name: 'API Gateway (Envoy)',
@@ -62,6 +64,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '99.99%',
       errorRate: '0.00%',
       namespace: 'ingress',
+      subTag: 'Nominal (4ms)',
       leftPercent: '2%',
       topPx: 16,
       widthPercent: '28%',
@@ -86,6 +89,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: isNominal ? '99.95%' : '84.2%',
       errorRate: isNominal ? '0.00%' : '38.4%',
       namespace: 'workloads',
+      subTag: isNominal ? 'Nominal (18ms)' : 'DEGRADED · 2840ms',
       leftPercent: '36%',
       topPx: 16,
       widthPercent: '28%',
@@ -110,13 +114,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '99.99%',
       errorRate: isNominal ? '0.00%' : '14.2%',
       namespace: 'database',
+      subTag: isNominal ? 'Nominal (6ms)' : 'DEGRADED · 142ms',
       leftPercent: '70%',
       topPx: 16,
       widthPercent: '28%',
       heightPx: 82,
     },
 
-    // Bottom Row: Telemetry, AI Triage, AST Guardrail & Telegram Dispatch (4 Nodes)
+    // Bottom Row: Telemetry, Gemini RAG, AST Guardrail & Telegram Dispatch (4 Nodes)
     {
       id: 'alert-webhook',
       name: 'Alert Ingest (Prometheus)',
@@ -130,6 +135,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'telemetry',
+      subTag: !isNominal ? 'Ingesting Stream' : 'Listening',
       leftPercent: '2%',
       topPx: 142,
       widthPercent: '22%',
@@ -148,6 +154,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'ai-core',
+      subTag: !isNominal ? 'pgvector RAG Live' : 'Standby SOPs',
       leftPercent: '26.5%',
       topPx: 142,
       widthPercent: '22%',
@@ -166,6 +173,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'automation',
+      subTag: !isNominal ? 'AST Verified (0 Blast)' : 'Enforced',
       leftPercent: '51%',
       topPx: 142,
       widthPercent: '22%',
@@ -184,6 +192,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'channels',
+      subTag: !isNominal ? 'Alert Dispatched' : '@AuroraSREBot',
       leftPercent: '75.5%',
       topPx: 142,
       widthPercent: '22.5%',
@@ -201,7 +210,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
   // Mathematical SVG Connection Coordinates in a 1000 x 240 canvas
   const pathGwToCheckout = 'M 300 57 L 360 57';
   const pathCheckoutToDb = 'M 640 57 L 700 57';
-  const pathCheckoutToAlert = 'M 500 98 C 500 125, 130 115, 130 142';
+  const pathCheckoutToAlert = 'M 500 98 C 500 126, 130 116, 130 142';
   const pathAlertToRag = 'M 240 183 L 265 183';
   const pathRagToGuardrail = 'M 485 183 L 510 183';
   const pathGuardrailToTelegram = 'M 730 183 L 755 183';
@@ -237,7 +246,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
 
   return (
     <div className="flex flex-col w-full bg-white dark:bg-[#0B0F17] rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-4.5 shadow-sm relative overflow-hidden transition-colors">
-      {/* 1. Header with Title & Status Pill */}
+      {/* 1. Header with Title & Live Status Indicator */}
       <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-white/[0.06] mb-3">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shadow-xs">
@@ -313,17 +322,23 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                 <linearGradient id="laserAI" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#6366F1" stopOpacity="0.9" />
                   <stop offset="50%" stopColor="#8B5CF6" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#0EA5E9" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="#A855F7" stopOpacity="0.9" />
+                </linearGradient>
+
+                <linearGradient id="laserGuardrail" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.9" />
+                  <stop offset="50%" stopColor="#10B981" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#059669" stopOpacity="0.9" />
                 </linearGradient>
 
                 <linearGradient id="laserTelegram" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#0EA5E9" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#38BDF8" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#0284C7" stopOpacity="0.9" />
+                  <stop offset="0%" stopColor="#0284C7" stopOpacity="0.9" />
+                  <stop offset="50%" stopColor="#0EA5E9" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.9" />
                 </linearGradient>
 
-                <filter id="glowEffect" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="2.5" result="blur" />
+                <filter id="glowEffect" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
                 </filter>
               </defs>
@@ -349,6 +364,8 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <circle r="3.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#10B981'}>
                 <animateMotion dur="1.2s" repeatCount="indefinite" path={pathGwToCheckout} />
               </circle>
+              <circle cx="300" cy="57" r="2.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#10B981'} />
+              <circle cx="360" cy="57" r="2.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#10B981'} />
 
               {/* 2. Checkout -> PostgreSQL */}
               <path
@@ -371,6 +388,8 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <circle r="3.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'}>
                 <animateMotion dur="1.4s" repeatCount="indefinite" path={pathCheckoutToDb} />
               </circle>
+              <circle cx="640" cy="57" r="2.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'} />
+              <circle cx="700" cy="57" r="2.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'} />
 
               {/* 3. Incident Telemetry Conduit: Checkout -> Alert Webhook */}
               <path
@@ -387,18 +406,23 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                     d={pathCheckoutToAlert}
                     fill="none"
                     stroke="url(#laserCritical)"
-                    strokeWidth="2.5"
-                    strokeDasharray="4 4"
+                    strokeWidth="3"
+                    strokeDasharray="5 5"
                     className="animate-laser-flow"
                     filter="url(#glowEffect)"
                   />
-                  <circle r="3.5" fill="#EF4444">
+                  <circle r="4" fill="#EF4444">
                     <animateMotion dur="0.9s" repeatCount="indefinite" path={pathCheckoutToAlert} />
+                  </circle>
+                  <circle r="2.5" fill="#F87171">
+                    <animateMotion dur="0.9s" begin="0.45s" repeatCount="indefinite" path={pathCheckoutToAlert} />
                   </circle>
                 </>
               )}
+              <circle cx="500" cy="98" r="3" fill={!isNominal ? '#EF4444' : '#94A3B8'} />
+              <circle cx="130" cy="142" r="3" fill={!isNominal ? '#EF4444' : '#94A3B8'} />
 
-              {/* 4. Alert Ingest -> Gemini RAG Agent */}
+              {/* 4. Alert Ingest -> Gemini RAG Agent (Live SOP Vector Search Flow) */}
               <path
                 d={pathAlertToRag}
                 fill="none"
@@ -410,18 +434,25 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                 d={pathAlertToRag}
                 fill="none"
                 stroke={!isNominal ? 'url(#laserAI)' : '#CBD5E1'}
-                strokeWidth="2.5"
+                strokeWidth={!isNominal ? '3.5' : '2'}
                 strokeDasharray="5 5"
                 className={!isNominal ? 'animate-laser-flow' : ''}
                 filter={!isNominal ? 'url(#glowEffect)' : undefined}
               />
               {!isNominal && (
-                <circle r="3.5" fill="#6366F1">
-                  <animateMotion dur="0.8s" repeatCount="indefinite" path={pathAlertToRag} />
-                </circle>
+                <>
+                  <circle r="4.5" fill="#8B5CF6">
+                    <animateMotion dur="0.75s" repeatCount="indefinite" path={pathAlertToRag} />
+                  </circle>
+                  <circle r="3" fill="#C084FC">
+                    <animateMotion dur="0.75s" begin="0.37s" repeatCount="indefinite" path={pathAlertToRag} />
+                  </circle>
+                </>
               )}
+              <circle cx="240" cy="183" r="3" fill={!isNominal ? '#8B5CF6' : '#94A3B8'} />
+              <circle cx="265" cy="183" r="3" fill={!isNominal ? '#8B5CF6' : '#94A3B8'} />
 
-              {/* 5. Gemini RAG Agent -> Safety Guardrail */}
+              {/* 5. Gemini RAG Agent -> Safety Guardrail (AST Verification Flow) */}
               <path
                 d={pathRagToGuardrail}
                 fill="none"
@@ -432,19 +463,26 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <path
                 d={pathRagToGuardrail}
                 fill="none"
-                stroke={!isNominal ? 'url(#laserAI)' : '#CBD5E1'}
-                strokeWidth="2.5"
+                stroke={!isNominal ? 'url(#laserGuardrail)' : '#CBD5E1'}
+                strokeWidth={!isNominal ? '3.5' : '2'}
                 strokeDasharray="5 5"
                 className={!isNominal ? 'animate-laser-flow' : ''}
                 filter={!isNominal ? 'url(#glowEffect)' : undefined}
               />
               {!isNominal && (
-                <circle r="3.5" fill="#10B981">
-                  <animateMotion dur="0.8s" repeatCount="indefinite" path={pathRagToGuardrail} />
-                </circle>
+                <>
+                  <circle r="4.5" fill="#10B981">
+                    <animateMotion dur="0.75s" repeatCount="indefinite" path={pathRagToGuardrail} />
+                  </circle>
+                  <circle r="3" fill="#6EE7B7">
+                    <animateMotion dur="0.75s" begin="0.37s" repeatCount="indefinite" path={pathRagToGuardrail} />
+                  </circle>
+                </>
               )}
+              <circle cx="485" cy="183" r="3" fill={!isNominal ? '#10B981' : '#94A3B8'} />
+              <circle cx="510" cy="183" r="3" fill={!isNominal ? '#10B981' : '#94A3B8'} />
 
-              {/* 6. Safety Guardrail -> Telegram Notifier (@AuroraSREBot) */}
+              {/* 6. Safety Guardrail -> Telegram Notifier (@AuroraSREBot Alert Push) */}
               <path
                 d={pathGuardrailToTelegram}
                 fill="none"
@@ -456,16 +494,23 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                 d={pathGuardrailToTelegram}
                 fill="none"
                 stroke={!isNominal ? 'url(#laserTelegram)' : '#CBD5E1'}
-                strokeWidth="2.5"
+                strokeWidth={!isNominal ? '4' : '2'}
                 strokeDasharray="5 5"
                 className={!isNominal ? 'animate-laser-flow' : ''}
                 filter={!isNominal ? 'url(#glowEffect)' : undefined}
               />
               {!isNominal && (
-                <circle r="4" fill="#0EA5E9">
-                  <animateMotion dur="0.7s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
-                </circle>
+                <>
+                  <circle r="5" fill="#0EA5E9">
+                    <animateMotion dur="0.65s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
+                  </circle>
+                  <circle r="3.5" fill="#7DD3FC">
+                    <animateMotion dur="0.65s" begin="0.32s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
+                  </circle>
+                </>
               )}
+              <circle cx="730" cy="183" r="3.5" fill={!isNominal ? '#0EA5E9' : '#94A3B8'} />
+              <circle cx="755" cy="183" r="3.5" fill={!isNominal ? '#0EA5E9' : '#94A3B8'} />
 
               {/* 7. Remediation Feedback Loop: Safety Guardrail -> Checkout Service */}
               {currentStep >= 4 && (
@@ -473,13 +518,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                   <path
                     d={pathGuardrailToCheckout}
                     fill="none"
-                    stroke="#10B981"
-                    strokeWidth="2"
+                    stroke="url(#laserNominal)"
+                    strokeWidth="3"
                     strokeDasharray="4 4"
                     className="animate-laser-flow"
+                    filter="url(#glowEffect)"
                   />
-                  <circle r="3" fill="#10B981">
-                    <animateMotion dur="0.9s" repeatCount="indefinite" path={pathGuardrailToCheckout} />
+                  <circle r="4" fill="#10B981">
+                    <animateMotion dur="0.85s" repeatCount="indefinite" path={pathGuardrailToCheckout} />
                   </circle>
                 </>
               )}
@@ -506,13 +552,15 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                     }}
                     className={`absolute rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all duration-200 ${
                       isCrit
-                        ? 'bg-white dark:bg-[#12080C] border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.35)] ring-2 ring-rose-400/40'
+                        ? 'bg-white dark:bg-[#12080C] border-2 border-rose-500 shadow-[0_0_22px_rgba(244,63,94,0.45)] ring-2 ring-rose-400/40'
                         : isDeg
-                        ? 'bg-white dark:bg-[#120D08] border-2 border-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.3)]'
+                        ? 'bg-white dark:bg-[#120D08] border-2 border-amber-500 shadow-[0_0_18px_rgba(245,158,11,0.35)]'
                         : isAct && node.id === 'telegram-notifier'
-                        ? 'bg-white dark:bg-[#080E14] border-2 border-sky-500 shadow-[0_0_20px_rgba(14,165,233,0.35)] ring-2 ring-sky-400/40 animate-pulse'
+                        ? 'bg-white dark:bg-[#080E14] border-2 border-sky-500 shadow-[0_0_24px_rgba(14,165,233,0.45)] ring-2 ring-sky-400/50'
+                        : isAct && node.id === 'rag-ai-agent'
+                        ? 'bg-white dark:bg-[#0E0A18] border-2 border-purple-500 shadow-[0_0_22px_rgba(168,85,247,0.4)] ring-2 ring-purple-400/40'
                         : isAct
-                        ? 'bg-white dark:bg-[#0A0D18] border-2 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.3)] ring-2 ring-indigo-400/30'
+                        ? 'bg-white dark:bg-[#0A0D18] border-2 border-indigo-500 shadow-[0_0_18px_rgba(99,102,241,0.35)] ring-2 ring-indigo-400/30'
                         : isSelected
                         ? 'bg-white dark:bg-[#0B0F17] border-2 border-emerald-500 shadow-md ring-2 ring-emerald-400/20'
                         : 'bg-white/95 dark:bg-[#0E121B]/95 border border-slate-200/90 dark:border-white/[0.08] shadow-xs hover:border-slate-300 dark:hover:border-white/[0.18]'
@@ -522,17 +570,25 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                     <div className="flex items-center justify-between gap-1.5">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div
-                          className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                          className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 relative ${
                             isCrit
                               ? 'bg-rose-100 dark:bg-rose-950/80'
                               : isAct && node.id === 'telegram-notifier'
                               ? 'bg-sky-100 dark:bg-sky-950/80'
+                              : isAct && node.id === 'rag-ai-agent'
+                              ? 'bg-purple-100 dark:bg-purple-950/80'
                               : isAct
                               ? 'bg-indigo-100 dark:bg-indigo-950/80'
                               : 'bg-emerald-50 dark:bg-emerald-950/60'
                           }`}
                         >
                           {renderIcon(node.iconType, isCrit, isAct)}
+                          {isAct && node.id === 'telegram-notifier' && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-sky-500 rounded-full animate-ping" />
+                          )}
+                          {isAct && node.id === 'rag-ai-agent' && (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-purple-500 rounded-full animate-ping" />
+                          )}
                         </div>
                         <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                           {node.shortName}
@@ -546,8 +602,10 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
                             : isDeg
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                            : isAct && node.id === 'telegram-notifier'
+                            ? 'bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300'
                             : isAct
-                            ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
                             : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300'
                         }`}
                       >
@@ -565,13 +623,15 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                           isCrit
                             ? 'text-rose-600 dark:text-rose-400 font-bold'
                             : isAct && node.id === 'telegram-notifier'
-                            ? 'text-sky-600 dark:text-sky-400 font-bold animate-pulse'
+                            ? 'text-sky-600 dark:text-sky-400 font-bold flex items-center gap-1'
+                            : isAct && node.id === 'rag-ai-agent'
+                            ? 'text-purple-600 dark:text-purple-400 font-bold flex items-center gap-1'
                             : isDeg
                             ? 'text-amber-600 dark:text-amber-400 font-bold'
                             : 'text-slate-700 dark:text-zinc-300'
                         }`}
                       >
-                        {isCrit ? node.errorRate : node.status === 'NOMINAL' ? 'Nominal' : node.status}
+                        {node.subTag}
                       </span>
                     </div>
                   </motion.div>
