@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Clock, ArrowUpRight } from 'lucide-react';
+import { AlertTriangle, Clock, ArrowUpRight, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { ActiveIncidentState } from '../../types';
 
 interface ActiveIncidentCardProps {
@@ -11,6 +11,18 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
   activeIncident,
   onInvestigate,
 }) => {
+  const isClosed = 
+    activeIncident.status === 'CLOSED' ||
+    activeIncident.status === 'RESOLVED' ||
+    !activeIncident.incidentId ||
+    activeIncident.incidentId === 'INC-NOMINAL-000' ||
+    activeIncident.incidentId === 'nominal' ||
+    activeIncident.title.includes('Operational') ||
+    activeIncident.title.includes('0 Errors');
+
+  const isCritical = !isClosed && activeIncident.severity === 'CRITICAL';
+  const isHigh = !isClosed && activeIncident.severity === 'HIGH';
+
   return (
     <div
       id="active-incident-spotlight-card"
@@ -23,7 +35,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
             4
           </span>
           <h2 className="text-[12px] font-bold text-[#111312] dark:text-white tracking-wider uppercase">
-            ACTIVE INCIDENT MONITOR
+            {isClosed ? 'INCIDENT MONITOR' : 'ACTIVE INCIDENT MONITOR'}
           </h2>
         </div>
 
@@ -37,22 +49,48 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
       </div>
 
       {/* Incident Box Container */}
-      <div className="border border-[#FDA4AF] dark:border-rose-900/50 bg-[#FFF5F5] dark:bg-rose-950/20 rounded-xl p-3 flex flex-col gap-2 transition-colors">
-        {/* Top Row: Severity Badge + ID + Time */}
+      <div
+        className={`rounded-xl p-3 flex flex-col gap-2 transition-all ${
+          isClosed
+            ? 'border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0E121B]'
+            : isCritical
+            ? 'border border-[#FDA4AF] dark:border-rose-900/50 bg-[#FFF5F5] dark:bg-rose-950/20'
+            : isHigh
+            ? 'border border-[#FDE68A] dark:border-amber-900/50 bg-[#FFFBEB] dark:bg-amber-950/20'
+            : 'border border-[#BAE6FD] dark:border-sky-900/50 bg-[#F0F9FF] dark:bg-sky-950/20'
+        }`}
+      >
+        {/* Top Row: Status / Severity Badge + ID + Time */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FFE4E6] dark:bg-rose-950/60 text-[#E11D48] dark:text-rose-400 text-[10px] font-bold border border-transparent dark:border-rose-800/40 font-mono">
-              <AlertTriangle className="w-3 h-3 fill-[#E11D48] dark:fill-rose-400 text-[#FFE4E6] dark:text-rose-950" />
-              {activeIncident.severity}
-            </span>
+            {isClosed ? (
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-[10px] font-bold border border-slate-300 dark:border-zinc-700 font-mono">
+                <CheckCircle2 className="w-3 h-3 text-slate-600 dark:text-zinc-400" />
+                CLOSED
+              </span>
+            ) : (
+              <span
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold font-mono ${
+                  isCritical
+                    ? 'bg-[#FFE4E6] dark:bg-rose-950/60 text-[#E11D48] dark:text-rose-400 border border-transparent dark:border-rose-800/40'
+                    : isHigh
+                    ? 'bg-[#FEF3C7] dark:bg-amber-950/60 text-[#D97706] dark:text-amber-400 border border-transparent dark:border-amber-800/40'
+                    : 'bg-[#E0F2FE] dark:bg-sky-950/60 text-[#0284C7] dark:text-sky-400 border border-transparent dark:border-sky-800/40'
+                }`}
+              >
+                <AlertTriangle className="w-3 h-3" />
+                {activeIncident.severity}
+              </span>
+            )}
+
             <span className="text-[11px] font-mono font-bold text-[#111312] dark:text-zinc-200">
-              {activeIncident.incidentId}
+              {activeIncident.incidentId || 'INC-NOMINAL-000'}
             </span>
           </div>
 
           <div className="flex items-center gap-1 text-[10px] text-[#606763] dark:text-zinc-400 font-medium font-mono">
             <Clock className="w-3 h-3 text-[#606763] dark:text-zinc-400" />
-            <span>{activeIncident.timeAgo}</span>
+            <span>{activeIncident.timeAgo || 'Live'}</span>
           </div>
         </div>
 
@@ -69,7 +107,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
         {/* 4 Metric Blocks */}
         <div className="grid grid-cols-4 gap-2 pt-0.5">
           {/* Block 1 */}
-          <div className="bg-white dark:bg-[#0E121B] border border-[#E5E8E5] dark:border-white/[0.08] rounded-lg p-1.5 flex flex-col">
+          <div className="bg-white dark:bg-[#090C14] border border-[#E5E8E5] dark:border-white/[0.08] rounded-lg p-1.5 flex flex-col">
             <span className="text-[9px] text-[#929894] dark:text-zinc-500 font-medium leading-none mb-1">
               Confidence
             </span>
@@ -79,7 +117,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
           </div>
 
           {/* Block 2 */}
-          <div className="bg-white dark:bg-[#0E121B] border border-[#E5E8E5] dark:border-white/[0.08] rounded-lg p-1.5 flex flex-col">
+          <div className="bg-white dark:bg-[#090C14] border border-[#E5E8E5] dark:border-white/[0.08] rounded-lg p-1.5 flex flex-col">
             <span className="text-[9px] text-[#929894] dark:text-zinc-500 font-medium leading-none mb-1">
               Runbook
             </span>
@@ -89,7 +127,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
           </div>
 
           {/* Block 3 */}
-          <div className="bg-white dark:bg-[#0E121B] border border-[#E5E8E5] dark:border-white/[0.08] rounded-lg p-1.5 flex flex-col">
+          <div className="bg-white dark:bg-[#090C14] border border-[#E5E8E5] dark:border-white/[0.08] rounded-lg p-1.5 flex flex-col">
             <span className="text-[9px] text-[#929894] dark:text-zinc-500 font-medium leading-none mb-1">
               MTTR
             </span>
@@ -99,7 +137,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
           </div>
 
           {/* Block 4 */}
-          <div className="bg-white dark:bg-[#0E121B] border border-[#E5E8E5] dark:border-white/[0.08] rounded-lg p-1.5 flex flex-col">
+          <div className="bg-white dark:bg-[#090C14] border border-[#E5E8E5] dark:border-white/[0.08] rounded-lg p-1.5 flex flex-col">
             <span className="text-[9px] text-[#929894] dark:text-zinc-500 font-medium leading-none mb-1">
               Blast Radius
             </span>

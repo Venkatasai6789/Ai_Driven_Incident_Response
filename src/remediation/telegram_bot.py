@@ -150,8 +150,33 @@ class TelegramPollingBot:
             if acted_id:
                 self._processed_actions[acted_id] = "approved" if decision == "approve" else "rejected"
 
-            # 3. If approved, execute command and dispatch execution receipt!
+            # 3. If approved, broadcast executing state immediately, execute command, and dispatch execution receipt!
             if success and acted_id and decision == "approve":
+                try:
+                    from src.triage.events_ws import ws_manager
+                    import asyncio
+                    try:
+                        loop = asyncio.get_running_loop()
+                        loop.create_task(ws_manager.broadcast({
+                            "event_type": "REMEDIATION_EXECUTING",
+                            "type": "REMEDIATION_EXECUTING",
+                            "action_id": acted_id,
+                            "step_index": 4,
+                            "stage": "EXECUTE",
+                            "user_name": user_name,
+                        }))
+                    except RuntimeError:
+                        asyncio.run(ws_manager.broadcast({
+                            "event_type": "REMEDIATION_EXECUTING",
+                            "type": "REMEDIATION_EXECUTING",
+                            "action_id": acted_id,
+                            "step_index": 4,
+                            "stage": "EXECUTE",
+                            "user_name": user_name,
+                        }))
+                except Exception as e:
+                    print(f"[!] WebSocket broadcast notice: {e}")
+
                 print(f"[*] Executing approved remediation command for Action {acted_id}...", flush=True)
                 receipt = self.controller.execute_approved_action(acted_id, dry_run=False)
                 safe_stdout = (receipt.stdout or "").encode('ascii', errors='replace').decode('ascii')

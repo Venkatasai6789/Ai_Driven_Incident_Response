@@ -223,7 +223,7 @@ async def inject_chaos_experiment(req: ChaosInjectRequest):
         )
 
         incident_id = res.get("incident_id")
-        if incident_id and not req.dry_run:
+        if incident_id:
             cmd = "kubectl rollout restart deployment/rag-ai-agent -n production"
             if req.experiment_id == "exp-db":
                 cmd = "kubectl rollout restart deployment/supabase-db -n production"
@@ -763,11 +763,11 @@ async def receive_alerts(request: Request):
                 step_index=2,
                 payload={
                     "service": alert.service,
-                    "severity": result.classification.severity,
+                    "severity": result.severity,
                     "alert_name": alert.alert_name,
                     "description": alert.description,
-                    "sopMatched": result.classification.recommended_runbook_title or "SOP Runbook",
-                    "confidence": result.classification.confidence_score,
+                    "sopMatched": result.matched_runbook_title or "SOP Runbook",
+                    "confidence": round(result.similarity_score * 100, 1) if result.similarity_score else 95.0,
                 }
             )
         except Exception as ws_err:
@@ -851,9 +851,30 @@ async def receive_telegram_webhook(request: Request):
 
     if success and action_id and callback_data.startswith("approve"):
         try:
+            try:
+                await ws_manager.broadcast({
+                    "event_type": "REMEDIATION_EXECUTING",
+                    "type": "REMEDIATION_EXECUTING",
+                    "action_id": action_id,
+                    "step_index": 4,
+                    "stage": "EXECUTE",
+                    "user_name": user_name,
+                })
+            except Exception:
+                pass
             remediation_controller.execute_approved_action(action_id, dry_run=False)
         except Exception as e:
             print(f"[ERROR] Failed to execute approved action {action_id}: {e}")
+    elif success and action_id and callback_data.startswith("reject"):
+        try:
+            await ws_manager.broadcast({
+                "type": "INCIDENT_REJECTED",
+                "action_id": action_id,
+                "user_name": user_name,
+                "status": "rejected",
+            })
+        except Exception:
+            pass
 
     return {"ok": success, "message": msg, "action_id": action_id}
 

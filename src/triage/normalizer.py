@@ -52,8 +52,19 @@ class AlertNormalizer:
         return hashlib.sha256(payload_key.encode("utf-8")).hexdigest()
 
     @classmethod
-    def normalize(cls, payload: Dict[str, Any], default_source: str = "custom") -> List[NormalizedAlert]:
+    def normalize(cls, payload: Any, default_source: str = "custom") -> List[NormalizedAlert]:
         """Detect provider format and normalize into one or more NormalizedAlert objects."""
+        # 0. Handle batch list of alert payloads
+        if isinstance(payload, list):
+            alerts = []
+            for item in payload:
+                if isinstance(item, dict):
+                    alerts.extend(cls.normalize(item, default_source=default_source))
+            return alerts
+
+        if not isinstance(payload, dict):
+            return []
+
         # 1. Prometheus Alertmanager format
         if "alerts" in payload and isinstance(payload["alerts"], list):
             return cls._normalize_prometheus(payload)

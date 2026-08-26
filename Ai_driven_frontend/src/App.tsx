@@ -35,12 +35,12 @@ export default function App() {
     // Check if backend has an ongoing incident
     ApiService.getActiveIncident()
       .then((data) => {
-        if (data && data.incident_id && data.service && data.service !== 'nominal') {
+        if (data && data.incident_id && data.service && data.service !== 'nominal' && data.status !== 'NOMINAL' && data.status !== 'CLOSED' && data.status !== 'RESOLVED') {
           const matchedExp = chaosExperiments.find(
             (e) => e.service === data.service || (data.service === 'checkout-service' && e.type === 'oom')
           );
           if (matchedExp) {
-            handleTriggerExperiment(matchedExp);
+            handleTriggerExperiment(matchedExp, data.incident_id);
           }
         }
       })
@@ -50,15 +50,57 @@ export default function App() {
 
     const ws = ApiService.connectWebSocket(
       (data) => {
-        if (data && (data.event === 'alert' || data.event_type === 'ALERT_RECEIVED' || data.event_type === 'INCIDENT_TRIAGED')) {
-          const payload = data.payload || {};
-          const service = payload.service || 'checkout-service';
-          const matchedExp = chaosExperiments.find(
-            (e) => e.service === service || (service === 'checkout-service' && e.type === 'oom')
-          ) || chaosExperiments[0];
+        if (data) {
+          if (data.event === 'alert' || data.event_type === 'ALERT_RECEIVED' || data.event_type === 'INCIDENT_TRIAGED') {
+            const payload = data.payload || {};
+            const service = payload.service || 'checkout-service';
+            const incId = data.incident_id || payload.incident_id;
+            const matchedExp = chaosExperiments.find(
+              (e) => e.service === service || (service === 'checkout-service' && e.type === 'oom')
+            ) || chaosExperiments[0];
 
-          if (matchedExp) {
-            handleTriggerExperiment(matchedExp);
+            if (matchedExp) {
+              handleTriggerExperiment(matchedExp, incId);
+            }
+          } else if (data.event_type === 'REMEDIATION_EXECUTING' || data.type === 'REMEDIATION_EXECUTING') {
+            setActiveIncident((prev) => {
+              const steps = prev.steps.map((s, idx) => {
+                if (idx < 4) return { ...s, status: 'completed' as const, sublabel: idx === 3 ? 'Approved' : s.sublabel };
+                if (idx === 4) return { ...s, status: 'active' as const, sublabel: 'Executing' };
+                return { ...s, status: 'pending' as const, sublabel: 'Pending' };
+              });
+              return {
+                ...prev,
+                currentStepIndex: 4,
+                steps,
+                currentStepName: 'Executing Remediation in Host Process',
+                currentStepDescription: `Telegram authorization confirmed${data.user_name ? ` by @${data.user_name}` : ''}. Executing zero-blast-radius command in cluster...`,
+                nextStepLabel: 'Health Verification & Ingress Probes',
+                nextStepStatus: 'Executing in Host Shell...',
+              };
+            });
+          } else if (data.event_type === 'INCIDENT_RESOLVED' || data.type === 'INCIDENT_RESOLVED') {
+            setActiveIncident((prev) => {
+              const steps = prev.steps.map((s) => ({
+                ...s,
+                status: 'completed' as const,
+                sublabel: 'Verified',
+              }));
+              return {
+                ...prev,
+                incidentId: data.incident_id || prev.incidentId || 'INC-NOMINAL-000',
+                title: `Resolved: ${prev.title}`,
+                status: 'CLOSED',
+                timeAgo: 'Just now',
+                currentStepIndex: 5,
+                steps,
+                currentStepName: 'Remediation Verified & Cluster Restored',
+                currentStepDescription: 'Remediation command succeeded (Exit Code 0). All cluster health probes verified healthy.',
+                nextStepLabel: 'Incident Closed & Resolved',
+                nextStepStatus: 'Remediation Succeeded (Exit Code 0)',
+              };
+            });
+            setCurrentExperimentId('nominal');
           }
         }
       },
@@ -82,15 +124,18 @@ export default function App() {
     }
   }, [isDark]);
 
-  // Triggering a chaos experiment updates the entire reactive control plane
-  const handleTriggerExperiment = (exp: ChaosExperiment) => {
+  // Triggering a chaos experiment from Card 2 (Chaos Lab) injects the simulation into the cluster
+  const handleTriggerChaosExperiment = (exp: ChaosExperiment) => {
     setCurrentExperimentId(exp.id);
 
+    const fallbackIncId = exp.id.replace('exp-', 'INC-2026-0824-');
+
     const updatedIncident: ActiveIncidentState = {
-      incidentId: `INC-2026-0824-${Math.floor(100 + Math.random() * 900)}`,
+      incidentId: fallbackIncId,
       title: `${exp.service.toUpperCase()} — ${exp.title}`,
       service: exp.service,
       severity: exp.severity,
+      status: 'OPEN',
       timeAgo: 'Just now',
       description: exp.description,
       confidence: exp.confidence,
@@ -122,22 +167,44 @@ export default function App() {
     };
 
     setActiveIncident(updatedIncident);
+
+    // Call backend API to create real incident in DB & Telegram approval request
+    ApiService.injectChaos(exp.id)
+      .then((res) => {
+        if (res && res.incident_id) {
+          setActiveIncident((prev) => ({
+            ...prev,
+            incidentId: res.incident_id,
+          }));
+        }
+      })
+      .catch(() => {
+        // Standalone offline fallback
+      });
   };
 
-  // Selecting an alert in Card 3A syncs the scenario across all 6 dashboard modules
-  const handleSelectAlertById = (experimentId: string) => {
+  // Inspecting an alert from Card 3A (Telemetry Alerts) ONLY selects the alert for viewing diagnostics
+  // It is purely a UI view action and NEVER dispatches anything to Telegram or injects chaos.
+  const handleSelectAlertById = (experimentId: string, incidentId?: string) => {
+    setCurrentExperimentId(experimentId);
     const matchedExp = chaosExperiments.find((e) => e.id === experimentId);
     if (matchedExp) {
-      handleTriggerExperiment(matchedExp);
-    }
-  };
-
-  const handleSelectService = (serviceId: string) => {
-    const matchedExp = chaosExperiments.find(
-      (e) => e.service === serviceId || (serviceId === 'checkout-service' && e.type === 'oom')
-    );
-    if (matchedExp) {
-      handleTriggerExperiment(matchedExp);
+      setActiveIncident((prev) => ({
+        ...prev,
+        incidentId: incidentId || prev.incidentId || matchedExp.id.replace('exp-', 'INC-2026-0824-'),
+        title: `${matchedExp.service.toUpperCase()} — ${matchedExp.title}`,
+        service: matchedExp.service,
+        severity: matchedExp.severity,
+        description: matchedExp.description,
+        confidence: matchedExp.confidence,
+        sopMatched: matchedExp.sop,
+        rootCause: matchedExp.rootCause,
+        recommendedAction: matchedExp.recommendedAction,
+        evidenceSources: matchedExp.evidenceSources,
+        proposedCommand: matchedExp.command,
+        riskLevel: matchedExp.riskLevel,
+        blastRadius: matchedExp.blastRadius,
+      }));
     }
   };
 
@@ -182,13 +249,12 @@ export default function App() {
               <SystemTopology
                 activeIncident={activeIncident}
                 onInvestigate={() => setIsDrawerOpen(true)}
-                onSelectService={handleSelectService}
               />
 
               {/* Card 2: Chaos Lab */}
               <ChaosLab
                 currentExperimentId={currentExperimentId}
-                onTriggerExperiment={handleTriggerExperiment}
+                onTriggerExperiment={handleTriggerChaosExperiment}
               />
 
               {/* Bottom Split Row: Card 3A (Alerts) & Card 3B (Triage Summary) */}

@@ -22,6 +22,17 @@ class EventWebSocketManager:
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
+    async def broadcast(self, message: dict):
+        to_remove = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                to_remove.append(connection)
+
+        for conn in to_remove:
+            self.disconnect(conn)
+
     async def broadcast_event(self, event_type: str, incident_id: str, stage: str, step_index: int, payload: dict):
         event_message = {
             "event_type": event_type,
@@ -30,15 +41,7 @@ class EventWebSocketManager:
             "step_index": step_index,
             "payload": payload,
         }
-        to_remove = []
-        for connection in self.active_connections:
-            try:
-                await connection.send_json(event_message)
-            except Exception:
-                to_remove.append(connection)
-
-        for conn in to_remove:
-            self.disconnect(conn)
+        await self.broadcast(event_message)
 
 
 ws_manager = EventWebSocketManager()

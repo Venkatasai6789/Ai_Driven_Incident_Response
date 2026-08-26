@@ -794,14 +794,6 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                     id={`mesh-node-${node.id}`}
                     onClick={() => {
                       setSelectedNodeId(node.id);
-                      if (
-                        onSelectService &&
-                        ['checkout-service', 'postgresql', 'api-gateway', 'logging-service', 'user-service'].includes(
-                          node.id
-                        )
-                      ) {
-                        onSelectService(node.id);
-                      }
                     }}
                     whileHover={node.isDimmed ? {} : { y: -2, scale: 1.02 }}
                     whileTap={node.isDimmed ? {} : { scale: 0.98 }}
@@ -1346,14 +1338,6 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                                 <motion.div
                                   onClick={() => {
                                     setSelectedNodeId(node.id);
-                                    if (
-                                      onSelectService &&
-                                      ['checkout-service', 'postgresql', 'api-gateway', 'logging-service', 'user-service'].includes(
-                                        node.id
-                                      )
-                                    ) {
-                                      onSelectService(node.id);
-                                    }
                                   }}
                                   whileHover={node.isDimmed ? {} : { y: -2, scale: 1.02 }}
                                   whileTap={node.isDimmed ? {} : { scale: 0.98 }}

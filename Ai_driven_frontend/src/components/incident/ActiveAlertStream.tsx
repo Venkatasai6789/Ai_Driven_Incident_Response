@@ -12,13 +12,13 @@ export interface TelemetryAlertItem {
   service: string;
   metric: string;
   timeAgo: string;
-  status: 'ACTIVE' | 'RESOLVING' | 'INVESTIGATING' | 'RESOLVED';
+  status: 'ACTIVE' | 'FIRING' | 'RESOLVING' | 'INVESTIGATING' | 'RESOLVED' | 'CLOSED';
   source?: string;
 }
 
 interface ActiveAlertStreamProps {
   currentExperimentId: string;
-  onSelectAlert: (experimentId: string) => void;
+  onSelectAlert: (experimentId: string, incidentId?: string) => void;
   onOpenDossier?: () => void;
 }
 
@@ -30,6 +30,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
   const [alerts, setAlerts] = useState<TelemetryAlertItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
 
   const fetchDynamicAlerts = async () => {
     try {
@@ -48,7 +49,6 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
 
   useEffect(() => {
     fetchDynamicAlerts();
-    // Refresh alerts periodically to sync with webhook arrivals
     const interval = setInterval(fetchDynamicAlerts, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -97,6 +97,36 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    const s = (status || 'FIRING').toUpperCase();
+    if (s === 'RESOLVED' || s === 'CLOSED') {
+      return (
+        <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-300 dark:border-zinc-700 flex-shrink-0">
+          CLOSED
+        </span>
+      );
+    }
+    if (s === 'INVESTIGATING' || s === 'TRIAGING') {
+      return (
+        <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-sky-600 text-white flex-shrink-0">
+          INVESTIGATING
+        </span>
+      );
+    }
+    if (s === 'ACTIVE' || s === 'FIRING') {
+      return (
+        <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-rose-600 text-white flex-shrink-0">
+          FIRING
+        </span>
+      );
+    }
+    return (
+      <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 flex-shrink-0">
+        {s}
+      </span>
+    );
+  };
+
   return (
     <div
       id="active-alert-stream-card"
@@ -123,7 +153,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
             type="button"
             onClick={fetchDynamicAlerts}
             title="Refresh alerts from database"
-            className="p-1 text-slate-400 dark:text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+            className="p-1 text-slate-400 dark:text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
           >
             <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -152,14 +182,17 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
           </div>
         ) : (
           alerts.slice(0, 5).map((alert) => {
-            const isSelected = alert.experimentId === currentExperimentId;
+            const isSelected = alert.id === selectedAlertId || alert.experimentId === currentExperimentId;
 
             return (
               <button
                 type="button"
                 key={alert.id}
                 id={`alert-row-${alert.id}`}
-                onClick={() => onSelectAlert(alert.experimentId)}
+                onClick={() => {
+                  setSelectedAlertId(alert.id);
+                  onSelectAlert(alert.experimentId, alert.incident_id || alert.id);
+                }}
                 className={`w-full text-left flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer group ${
                   isSelected
                     ? 'border-[#16A34A] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/30 shadow-[0_0_0_1px_#16A34A] dark:shadow-[0_0_0_1px_#10B981]'
@@ -174,11 +207,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
                       <span className={`text-[11px] font-bold leading-tight truncate ${isSelected ? 'text-[#14532D] dark:text-emerald-300' : 'text-[#0F172A] dark:text-zinc-200'}`}>
                         {alert.title}
                       </span>
-                      {isSelected && (
-                        <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-[#16A34A] dark:bg-emerald-500 text-white flex-shrink-0">
-                          SELECTED
-                        </span>
-                      )}
+                      {getStatusBadge(alert.status)}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[9.5px] font-mono text-[#64748B] dark:text-zinc-400 font-medium leading-none">

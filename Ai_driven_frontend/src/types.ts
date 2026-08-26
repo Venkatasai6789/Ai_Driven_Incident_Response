@@ -88,11 +88,25 @@ export interface ChaosExperiment {
   };
 }
 
+export interface TelemetryAlertItem {
+  id: string;
+  incidentId?: string;
+  experimentId?: string;
+  severity: IncidentSeverity;
+  title: string;
+  service: string;
+  metric: string;
+  timeAgo: string;
+  status: 'ACTIVE' | 'FIRING' | 'RESOLVING' | 'INVESTIGATING' | 'RESOLVED' | 'CLOSED';
+  createdAt?: string;
+}
+
 export interface ActiveIncidentState {
   incidentId: string;
   title: string;
   service: string;
   severity: IncidentSeverity;
+  status?: 'OPEN' | 'INVESTIGATING' | 'MITIGATING' | 'RESOLVED' | 'CLOSED' | 'NOMINAL';
   timeAgo: string;
   description: string;
   confidence: number;

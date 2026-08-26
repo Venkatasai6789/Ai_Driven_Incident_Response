@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, ShieldCheck, Copy, CheckCheck } from 'lucide-react';
+import { Check, ShieldCheck, Copy, CheckCheck, Loader2, Sparkles, Activity } from 'lucide-react';
 import { ActiveIncidentState } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -19,6 +19,30 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({ activeIncident
   // Compact, professional stage labels that never collide
   const stepShortLabels = ['Ingest', 'Vector', 'Triage', 'Guardrail', 'Execute', 'Verify'];
 
+  // Calculate dynamic progress percentage: 
+  // Step 4 active -> ~60% | Step 5 active (Executing) -> ~75-80% | Step 6 completed -> 100%
+  const getProgressPercentage = () => {
+    const idx = activeIncident.currentStepIndex;
+    if (idx >= 5 || activeIncident.status === 'CLOSED' || activeIncident.status === 'RESOLVED') {
+      return 100;
+    }
+    if (idx === 4) {
+      return 75;
+    }
+    if (idx === 3) {
+      return 60;
+    }
+    if (idx === 2) {
+      return 40;
+    }
+    if (idx === 1) {
+      return 20;
+    }
+    return 5;
+  };
+
+  const isExecuting = activeIncident.currentStepIndex === 4;
+
   return (
     <div
       id="pipeline-stepper-card"
@@ -33,10 +57,17 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({ activeIncident
           <h2 className="text-[12px] font-bold text-[#111312] dark:text-white tracking-wider uppercase">
             AUTONOMOUS REMEDIATION PIPELINE
           </h2>
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#ECFDF3] dark:bg-emerald-950/50 border border-[#DCFCE7] dark:border-emerald-800/40 text-[10px] font-semibold text-[#15803D] dark:text-emerald-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] dark:bg-emerald-400 animate-pulse" />
-            Live Guardrail
-          </span>
+          {isExecuting ? (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/40 text-[10px] font-semibold text-amber-700 dark:text-amber-400 animate-pulse">
+              <Loader2 className="w-3 h-3 text-amber-600 dark:text-amber-400 animate-spin" />
+              Executing in DB/Shell
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#ECFDF3] dark:bg-emerald-950/50 border border-[#DCFCE7] dark:border-emerald-800/40 text-[10px] font-semibold text-[#15803D] dark:text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] dark:bg-emerald-400 animate-pulse" />
+              Live Guardrail
+            </span>
+          )}
         </div>
       </div>
 
@@ -44,21 +75,25 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({ activeIncident
       <div className="w-full px-1 py-1.5">
         <div className="flex items-center justify-between relative">
           {/* Horizontal Connecting Line Behind Steps */}
-          <div className="absolute top-3 left-4 right-4 h-[2px] bg-[#E5E8E5] dark:bg-zinc-800 -z-0">
+          <div className="absolute top-3 left-4 right-4 h-[3px] bg-[#E5E8E5] dark:bg-zinc-800 rounded-full overflow-hidden -z-0">
             <motion.div
-              className="h-full bg-[#22C55E] dark:bg-emerald-400"
+              className={`h-full ${
+                isExecuting
+                  ? 'bg-gradient-to-r from-[#22C55E] via-amber-400 to-[#22C55E] animate-laser-flow'
+                  : 'bg-[#22C55E] dark:bg-emerald-400'
+              }`}
               initial={false}
               animate={{
-                width: `${(activeIncident.currentStepIndex / (activeIncident.steps.length - 1)) * 100}%`,
+                width: `${getProgressPercentage()}%`,
               }}
-              transition={{ duration: 0.4, ease: 'easeInOut' }}
+              transition={{ duration: 0.6, ease: 'easeInOut' }}
             />
           </div>
 
           {/* Steps */}
           {activeIncident.steps.map((step, idx) => {
-            const isCompleted = step.status === 'completed';
-            const isActive = step.status === 'active';
+            const isCompleted = step.status === 'completed' || activeIncident.status === 'CLOSED' || activeIncident.status === 'RESOLVED';
+            const isActive = step.status === 'active' && !isCompleted;
 
             return (
               <div
@@ -77,6 +112,8 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({ activeIncident
                 >
                   {isCompleted ? (
                     <Check className="w-3 h-3 stroke-[2.5]" />
+                  ) : isActive && idx === 4 ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-600 dark:text-emerald-400" />
                   ) : (
                     <span>{step.id}</span>
                   )}
@@ -101,7 +138,7 @@ export const PipelineStepper: React.FC<PipelineStepperProps> = ({ activeIncident
                       : 'text-[#929894] dark:text-zinc-500'
                   }`}
                 >
-                  {step.time || step.sublabel}
+                  {isCompleted ? 'Verified' : step.time || step.sublabel}
                 </span>
               </div>
             );
