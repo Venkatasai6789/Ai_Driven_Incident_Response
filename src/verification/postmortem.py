@@ -188,6 +188,14 @@ Actions executed: {len(ctx['actions'])} action(s). Verification: {verification_d
             """,
             (postmortem_markdown, incident_id),
         )
+        cur.execute(
+            """
+            UPDATE alerts
+            SET status = 'resolved'
+            WHERE incident_id = %s;
+            """,
+            (incident_id,),
+        )
 
         # Log resolution event to timeline
         cur.execute(

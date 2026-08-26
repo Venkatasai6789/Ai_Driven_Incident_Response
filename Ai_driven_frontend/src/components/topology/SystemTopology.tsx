@@ -180,7 +180,18 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
   }, [isExpanded]);
 
   // Determine active incident details
-  const isNominal = !activeIncident || activeIncident.incidentId === 'INC-NOMINAL-000' || activeIncident.incidentId === 'nominal' || activeIncident.title.includes('Operational');
+  const isClosedOrResolved = 
+    activeIncident?.status === 'CLOSED' || 
+    activeIncident?.status === 'RESOLVED' || 
+    activeIncident?.status === 'NOMINAL';
+
+  const isNominal = 
+    !activeIncident || 
+    isClosedOrResolved ||
+    activeIncident.incidentId === 'INC-NOMINAL-000' || 
+    activeIncident.incidentId === 'nominal' || 
+    activeIncident.title.includes('Operational') ||
+    activeIncident.title.includes('0 Errors');
   const incidentService = isNominal ? null : (activeIncident ? activeIncident.service : null);
   const incidentSeverity = isNominal ? 'NOMINAL' : (activeIncident ? activeIncident.severity : 'NOMINAL');
   const currentStep = isNominal ? -1 : (activeIncident?.currentStepIndex ?? -1);

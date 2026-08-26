@@ -43,7 +43,9 @@
       "parameters": {
         "operation": "executeQuery",
         "query": "SELECT id, title, severity, status, created_at FROM incidents WHERE id = $1;",
-        "additionalFields": {}
+        "additionalFields": {
+          "queryParams": "={{ $json[0]?.incident_id || $json?.incident_id }}"
+        }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,

@@ -18,7 +18,7 @@ export interface TelemetryAlertItem {
 
 interface ActiveAlertStreamProps {
   currentExperimentId: string;
-  onSelectAlert: (experimentId: string, incidentId?: string) => void;
+  onSelectAlert: (experimentId: string, incidentId?: string, alertStatus?: string) => void;
   onOpenDossier?: () => void;
 }
 
@@ -99,7 +99,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
 
   const getStatusBadge = (status: string) => {
     const s = (status || 'FIRING').toUpperCase();
-    if (s === 'RESOLVED' || s === 'CLOSED') {
+    if (s === 'RESOLVED' || s === 'CLOSED' || s === 'NOMINAL') {
       return (
         <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-300 dark:border-zinc-700 flex-shrink-0">
           CLOSED
@@ -113,7 +113,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
         </span>
       );
     }
-    if (s === 'ACTIVE' || s === 'FIRING') {
+    if (s === 'ACTIVE' || s === 'FIRING' || s === 'OPEN') {
       return (
         <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-rose-600 text-white flex-shrink-0">
           FIRING
@@ -191,7 +191,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
                 id={`alert-row-${alert.id}`}
                 onClick={() => {
                   setSelectedAlertId(alert.id);
-                  onSelectAlert(alert.experimentId, alert.incident_id || alert.id);
+                  onSelectAlert(alert.experimentId, alert.incident_id || alert.id, alert.status);
                 }}
                 className={`w-full text-left flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer group ${
                   isSelected

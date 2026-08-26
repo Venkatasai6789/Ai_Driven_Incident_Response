@@ -270,13 +270,16 @@ def get_alerts_stream(status_filter: Optional[str] = None, limit: int = 10):
     cur = conn.cursor()
 
     query = """
-        SELECT a.id::text, a.fingerprint, a.severity, a.status, a.source, a.received_at,
+        SELECT a.id::text, a.fingerprint, a.severity, 
+               COALESCE(i.status, a.status) AS status,
+               a.source, a.received_at,
                a.normalized_payload, a.incident_id::text
         FROM alerts a
+        LEFT JOIN incidents i ON i.id = a.incident_id
     """
     params = []
     if status_filter and status_filter.lower() == "active":
-        query += " WHERE a.status IN ('firing', 'active', 'open', 'investigating')"
+        query += " WHERE COALESCE(i.status, a.status) IN ('firing', 'active', 'open', 'investigating', 'triaging')"
     
     query += " ORDER BY a.received_at DESC LIMIT %s;"
     params.append(limit)
@@ -581,6 +584,7 @@ def execute_remediation_override(incident_id: str, req: ExecuteRequest):
     operator_email = req.operator_id or "p.venkatsai333@gmail.com"
     cur.execute("UPDATE actions SET approval_status = 'approved', approved_by = %s WHERE id = %s;", (operator_email, action_id))
     cur.execute("UPDATE incidents SET status = 'resolved', resolved_at = NOW() WHERE id = %s;", (incident_id,))
+    cur.execute("UPDATE alerts SET status = 'resolved' WHERE incident_id = %s;", (incident_id,))
     cur.execute("""
         INSERT INTO timeline (incident_id, event_type, description, actor)
         VALUES (%s, 'execution', %s, %s);

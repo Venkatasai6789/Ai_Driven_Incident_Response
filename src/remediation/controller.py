@@ -199,11 +199,15 @@ class RemediationController:
             dry_run=real_dry_run,
         )
 
-        # Mark incident as resolved in PostgreSQL
+        # Mark incident and alerts as resolved in PostgreSQL
         conn_res = self.get_connection()
         cur_res = conn_res.cursor()
         cur_res.execute(
             "UPDATE incidents SET status = 'resolved', resolved_at = NOW() WHERE id = %s;",
+            (incident_id,)
+        )
+        cur_res.execute(
+            "UPDATE alerts SET status = 'resolved' WHERE incident_id = %s;",
             (incident_id,)
         )
         conn_res.commit()

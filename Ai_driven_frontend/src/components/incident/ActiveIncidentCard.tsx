@@ -14,6 +14,7 @@ export const ActiveIncidentCard: React.FC<ActiveIncidentCardProps> = ({
   const isClosed = 
     activeIncident.status === 'CLOSED' ||
     activeIncident.status === 'RESOLVED' ||
+    activeIncident.status === 'NOMINAL' ||
     !activeIncident.incidentId ||
     activeIncident.incidentId === 'INC-NOMINAL-000' ||
     activeIncident.incidentId === 'nominal' ||

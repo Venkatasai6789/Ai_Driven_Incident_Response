@@ -185,26 +185,85 @@ export default function App() {
 
   // Inspecting an alert from Card 3A (Telemetry Alerts) ONLY selects the alert for viewing diagnostics
   // It is purely a UI view action and NEVER dispatches anything to Telegram or injects chaos.
-  const handleSelectAlertById = (experimentId: string, incidentId?: string) => {
+  const handleSelectAlertById = (experimentId: string, incidentId?: string, alertStatus?: string) => {
     setCurrentExperimentId(experimentId);
     const matchedExp = chaosExperiments.find((e) => e.id === experimentId);
     if (matchedExp) {
-      setActiveIncident((prev) => ({
-        ...prev,
-        incidentId: incidentId || prev.incidentId || matchedExp.id.replace('exp-', 'INC-2026-0824-'),
-        title: `${matchedExp.service.toUpperCase()} — ${matchedExp.title}`,
-        service: matchedExp.service,
-        severity: matchedExp.severity,
-        description: matchedExp.description,
-        confidence: matchedExp.confidence,
-        sopMatched: matchedExp.sop,
-        rootCause: matchedExp.rootCause,
-        recommendedAction: matchedExp.recommendedAction,
-        evidenceSources: matchedExp.evidenceSources,
-        proposedCommand: matchedExp.command,
-        riskLevel: matchedExp.riskLevel,
-        blastRadius: matchedExp.blastRadius,
-      }));
+      const isAlertClosed = !alertStatus || alertStatus === 'RESOLVED' || alertStatus === 'CLOSED' || alertStatus === 'NOMINAL';
+
+      setActiveIncident((prev) => {
+        if (isAlertClosed) {
+          return {
+            ...prev,
+            incidentId: incidentId || prev.incidentId || matchedExp.id.replace('exp-', 'INC-2026-0824-'),
+            title: `${matchedExp.service.toUpperCase()} — ${matchedExp.title}`,
+            service: matchedExp.service,
+            severity: matchedExp.severity,
+            status: 'CLOSED',
+            timeAgo: 'Past Alert',
+            description: matchedExp.description,
+            confidence: matchedExp.confidence,
+            sopMatched: matchedExp.sop,
+            duration: '0.0s',
+            blastRadius: matchedExp.blastRadius,
+            currentStepIndex: 5,
+            steps: prev.steps.map((s) => ({
+              ...s,
+              status: 'completed' as const,
+              sublabel: 'Verified',
+            })),
+            currentStepName: 'Continuous SRE Health Monitoring',
+            currentStepDescription: 'Zero active alerts detected across Prometheus, Datadog, Grafana and webhook feeds.',
+            proposedCommand: matchedExp.command,
+            riskLevel: matchedExp.riskLevel,
+            category: matchedExp.category === 'SAFE' ? 'SAFE' : 'DESTRUCTIVE',
+            nextStepLabel: 'Monitoring Nominal Baseline',
+            nextStepStatus: 'All Systems Nominal',
+            rootCause: matchedExp.rootCause,
+            recommendedAction: matchedExp.recommendedAction,
+            evidenceSources: matchedExp.evidenceSources,
+            terminalOutput: matchedExp.terminalOutput,
+            timeline: matchedExp.timeline,
+            postMortem: matchedExp.postMortem,
+          };
+        } else {
+          return {
+            ...prev,
+            incidentId: incidentId || prev.incidentId || matchedExp.id.replace('exp-', 'INC-2026-0824-'),
+            title: `${matchedExp.service.toUpperCase()} — ${matchedExp.title}`,
+            service: matchedExp.service,
+            severity: matchedExp.severity,
+            status: 'OPEN',
+            timeAgo: 'Just now',
+            description: matchedExp.description,
+            confidence: matchedExp.confidence,
+            sopMatched: matchedExp.sop,
+            rootCause: matchedExp.rootCause,
+            recommendedAction: matchedExp.recommendedAction,
+            evidenceSources: matchedExp.evidenceSources,
+            proposedCommand: matchedExp.command,
+            riskLevel: matchedExp.riskLevel,
+            blastRadius: matchedExp.blastRadius,
+            currentStepIndex: 3,
+            steps: [
+              { id: 1, label: 'Ingest', sublabel: '11:24:03', time: '11:24:03', status: 'completed' },
+              { id: 2, label: 'Vector', sublabel: '11:24:04', time: '11:24:04', status: 'completed' },
+              { id: 3, label: 'Triage', sublabel: '11:24:05', time: '11:24:05', status: 'completed' },
+              { id: 4, label: 'Guardrail', sublabel: '11:24:06', time: '11:24:06', status: 'active' },
+              { id: 5, label: 'Execute', sublabel: 'Pending', time: 'Pending', status: 'pending' },
+              { id: 6, label: 'Verify', sublabel: 'Pending', time: 'Pending', status: 'pending' },
+            ],
+            currentStepName: 'Deterministic Safety Guardrail Policy',
+            currentStepDescription: 'Evaluating proposed remediation command against zero-blast-radius execution rules...',
+            nextStepLabel: matchedExp.nextStep,
+            nextStepStatus: 'Automated Authorization Granted',
+            category: matchedExp.category === 'SAFE' ? 'SAFE' : 'DESTRUCTIVE',
+            terminalOutput: matchedExp.terminalOutput,
+            timeline: matchedExp.timeline,
+            postMortem: matchedExp.postMortem,
+          };
+        }
+      });
     }
   };
 
