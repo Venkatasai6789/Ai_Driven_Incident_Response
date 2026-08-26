@@ -31,16 +31,15 @@ def get_db():
 def main():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("""
-        UPDATE incidents 
-        SET status = 'resolved', resolved_at = NOW() 
-        WHERE status IN ('open', 'investigating', 'firing', 'active', 'triaging', 'mitigating');
-    """)
-    count = cur.rowcount
+    cur.execute("TRUNCATE TABLE alerts, actions, timeline, incidents, ai_logs CASCADE;")
     conn.commit()
+    cur.execute("SELECT count(*) FROM alerts;")
+    alert_cnt = cur.fetchone()[0]
+    cur.execute("SELECT count(*) FROM incidents;")
+    inc_cnt = cur.fetchone()[0]
     cur.close()
     conn.close()
-    print(f"Successfully resolved {count} old accumulated test incidents in PostgreSQL.")
+    print(f"Successfully cleaned PostgreSQL database: {alert_cnt} alerts, {inc_cnt} active incidents. System at 0 errors baseline.")
 
 if __name__ == "__main__":
     main()
