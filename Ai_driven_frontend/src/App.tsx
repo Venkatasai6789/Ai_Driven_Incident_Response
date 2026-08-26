@@ -82,19 +82,9 @@ export default function App() {
     }
   }, [isDark]);
 
-  // Triggering a chaos experiment updates the entire reactive control plane and informs the backend
-  const handleTriggerExperiment = async (exp: ChaosExperiment) => {
+  // Triggering a chaos experiment updates the entire reactive control plane
+  const handleTriggerExperiment = (exp: ChaosExperiment) => {
     setCurrentExperimentId(exp.id);
-
-    // Call backend chaos injection API asynchronously
-    try {
-      ApiService.injectChaos(exp.id).catch((err) => {
-        // Backend optional / offline fallback
-        console.debug('Chaos API call finished:', err?.message || err);
-      });
-    } catch {
-      // Offline fallback
-    }
 
     const updatedIncident: ActiveIncidentState = {
       incidentId: `INC-2026-0824-${Math.floor(100 + Math.random() * 900)}`,

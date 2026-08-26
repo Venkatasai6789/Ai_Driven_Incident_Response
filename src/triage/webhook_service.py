@@ -223,7 +223,7 @@ async def inject_chaos_experiment(req: ChaosInjectRequest):
         )
 
         incident_id = res.get("incident_id")
-        if incident_id:
+        if incident_id and not req.dry_run:
             cmd = "kubectl rollout restart deployment/rag-ai-agent -n production"
             if req.experiment_id == "exp-db":
                 cmd = "kubectl rollout restart deployment/supabase-db -n production"

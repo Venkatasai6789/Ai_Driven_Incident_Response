@@ -35,6 +35,7 @@ class TelegramApprovalGate:
         self.bot_token = bot_token or os.getenv("TELEGRAM_BOT_TOKEN")
         self.chat_id = chat_id or os.getenv("TELEGRAM_CHAT_ID")
         self.api_url = f"https://api.telegram.org/bot{self.bot_token}" if self.bot_token else None
+        self._recent_dispatches: Dict[str, float] = {}
 
     def get_connection(self):
         """Establish connection to PostgreSQL."""
@@ -68,11 +69,22 @@ class TelegramApprovalGate:
     ) -> Dict[str, Any]:
         """
         Send an interactive Telegram message with inline [Approve] and [Reject] buttons.
+        Includes 30s deduplication cooldown to prevent message flooding.
         """
         recipient_chat = target_chat_id or self.chat_id
         if not self.bot_token or not recipient_chat:
             print("[!] Telegram credentials missing; operating in simulation mode.")
             return {"simulated": True, "action_id": action_id, "status": "pending"}
+
+        # Cooldown & Deduplication check (30s window per incident+command)
+        dispatch_key = f"{incident_id}:{command}"
+        now = time.time()
+        last_sent = self._recent_dispatches.get(dispatch_key, 0)
+        if (now - last_sent) < 30:
+            print(f"[!] Suppressing duplicate Telegram approval request for '{title}' (Cooldown active: {int(30 - (now - last_sent))}s remaining).")
+            return {"sent": False, "suppressed": True, "reason": "cooldown_active"}
+
+        self._recent_dispatches[dispatch_key] = now
 
         message_text = (
             f"🚨 <b>REMEDIATION APPROVAL REQUIRED</b>\n\n"
