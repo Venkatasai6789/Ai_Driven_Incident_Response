@@ -264,8 +264,8 @@ async def inject_chaos_experiment(req: ChaosInjectRequest):
 
 
 @app.get("/api/v1/alerts", tags=["Specification API"])
-def get_alerts_stream(status_filter: str = "active", limit: int = 10):
-    """Returns recent normalized alerts dynamically from database."""
+def get_alerts_stream(status_filter: Optional[str] = None, limit: int = 10):
+    """Returns recent normalized alerts dynamically from PostgreSQL database."""
     conn = get_db_connection()
     cur = conn.cursor()
 
@@ -275,8 +275,8 @@ def get_alerts_stream(status_filter: str = "active", limit: int = 10):
         FROM alerts a
     """
     params = []
-    if status_filter == "active":
-        query += " WHERE a.status IN ('firing', 'active')"
+    if status_filter and status_filter.lower() == "active":
+        query += " WHERE a.status IN ('firing', 'active', 'open', 'investigating')"
     
     query += " ORDER BY a.received_at DESC LIMIT %s;"
     params.append(limit)
@@ -286,34 +286,62 @@ def get_alerts_stream(status_filter: str = "active", limit: int = 10):
     cur.close()
     conn.close()
 
+    import datetime
+
+    def format_time_ago(dt):
+        if not dt:
+            return "Just now"
+        try:
+            if hasattr(dt, "tzinfo") and dt.tzinfo:
+                now = datetime.datetime.now(datetime.timezone.utc)
+            else:
+                now = datetime.datetime.utcnow()
+            diff = max(0, (now - dt).total_seconds())
+            if diff < 60:
+                return "Just now"
+            elif diff < 3600:
+                return f"{int(diff // 60)}m ago"
+            elif diff < 86400:
+                return f"{int(diff // 3600)}h ago"
+            else:
+                return f"{int(diff // 86400)}d ago"
+        except Exception:
+            return "Recently"
+
     alerts = []
     for r in rows:
         norm = r[6] if isinstance(r[6], dict) else {}
         alert_name = norm.get("alert_name") or "System Telemetry Alert"
         service_name = norm.get("service") or "infrastructure"
 
-        if "Memory" in alert_name or "OOM" in alert_name:
-            metric_val = "heap_used: 1.84GB / 2.0GB (98.4%)"
-        elif "Connection" in alert_name or "Postgres" in alert_name or "Pool" in alert_name:
-            metric_val = "active_conns: 100 / 100 (100%)"
-        elif "Disk" in alert_name or "Storage" in alert_name:
+        # Map to experiment identifier for UI interaction
+        exp_id = "exp-oom"
+        if "Postgres" in alert_name or "Connection" in alert_name or "postgresql" in service_name:
+            exp_id = "exp-db"
+            metric_val = "active_conns: 100 / 100"
+        elif "Disk" in alert_name or "Storage" in alert_name or "logging" in service_name:
+            exp_id = "exp-disk"
             metric_val = "nvme0n1p1: 95% capacity"
-        elif "WAF" in alert_name or "SQLi" in alert_name or "Security" in alert_name:
+        elif "WAF" in alert_name or "SQLi" in alert_name or "Security" in alert_name or "gateway" in service_name:
+            exp_id = "exp-security"
             metric_val = "waf_blocked_rate: 420 req/s"
-        elif "Anomaly" in alert_name or "Unrecognized" in alert_name:
-            metric_val = "vector_dist: 0.241"
+        elif "Anomaly" in alert_name or "Uncataloged" in alert_name or "user" in service_name:
+            exp_id = "exp-rag"
+            metric_val = "rag_vector_dist: 0.241"
         else:
-            metric_val = f"fingerprint: {r[1][:12] if r[1] else 'a8f9c12b'}"
+            metric_val = f"heap_used: 1.84GB / 2.0GB"
 
         alerts.append({
             "id": r[0],
-            "incident_id": r[7],
-            "severity": r[2].upper(),
+            "incident_id": r[7] or f"INC-{r[0][:8]}",
+            "experimentId": exp_id,
+            "severity": r[2].upper() if r[2] else "HIGH",
             "title": alert_name,
             "service": service_name,
             "metric": metric_val,
             "source": r[4],
-            "time_ago": "Recently",
+            "timeAgo": format_time_ago(r[5]),
+            "status": r[3].upper() if r[3] else "ACTIVE",
             "created_at": str(r[5]),
         })
     return alerts

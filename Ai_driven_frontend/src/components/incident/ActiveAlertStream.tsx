@@ -1,17 +1,19 @@
-import React from 'react';
-import { ChevronRight, AlertTriangle, AlertCircle, Info, Radio, Activity, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronRight, AlertTriangle, AlertCircle, Info, Radio, Activity, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
 import { IncidentSeverity } from '../../types';
-import { chaosExperiments } from '../../data/mockIncidents';
+import { ApiService } from '../../services/api';
 
 export interface TelemetryAlertItem {
   id: string;
+  incident_id?: string;
   experimentId: string;
   severity: IncidentSeverity;
   title: string;
   service: string;
   metric: string;
   timeAgo: string;
-  status: 'ACTIVE' | 'RESOLVING' | 'INVESTIGATING';
+  status: 'ACTIVE' | 'RESOLVING' | 'INVESTIGATING' | 'RESOLVED';
+  source?: string;
 }
 
 interface ActiveAlertStreamProps {
@@ -20,64 +22,37 @@ interface ActiveAlertStreamProps {
   onOpenDossier?: () => void;
 }
 
-export const telemetryAlertsList: TelemetryAlertItem[] = [
-  {
-    id: 'alt-oom',
-    experimentId: 'exp-oom',
-    severity: 'CRITICAL',
-    title: 'V8 Heap Memory Threshold Exceeded (>98%)',
-    service: 'checkout-service',
-    metric: 'heap_used_bytes: 1.84GB / 2.0GB',
-    timeAgo: '2m ago',
-    status: 'ACTIVE',
-  },
-  {
-    id: 'alt-db',
-    experimentId: 'exp-db',
-    severity: 'HIGH',
-    title: 'Database Client Pool Saturation >95%',
-    service: 'postgresql',
-    metric: 'active_connections: 96 / 100',
-    timeAgo: '8m ago',
-    status: 'INVESTIGATING',
-  },
-  {
-    id: 'alt-security',
-    experimentId: 'exp-security',
-    severity: 'HIGH',
-    title: 'Adversarial SQLi Signature on Edge Ingress',
-    service: 'api-gateway',
-    metric: 'waf_blocked_rate: 420 req/s',
-    timeAgo: '11m ago',
-    status: 'INVESTIGATING',
-  },
-  {
-    id: 'alt-disk',
-    experimentId: 'exp-disk',
-    severity: 'MEDIUM',
-    title: 'Disk Volume /var/log Utilization 92%',
-    service: 'logging-service',
-    metric: 'nvme0n1p1: 92% capacity',
-    timeAgo: '14m ago',
-    status: 'INVESTIGATING',
-  },
-  {
-    id: 'alt-rag',
-    experimentId: 'exp-rag',
-    severity: 'LOW',
-    title: 'Low Cosine Similarity on Gateway Anomaly (0.24)',
-    service: 'user-service',
-    metric: 'rag_vector_dist: 0.241',
-    timeAgo: '21m ago',
-    status: 'INVESTIGATING',
-  },
-];
-
 export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
   currentExperimentId,
   onSelectAlert,
   onOpenDossier,
 }) => {
+  const [alerts, setAlerts] = useState<TelemetryAlertItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  const fetchDynamicAlerts = async () => {
+    try {
+      setIsRefreshing(true);
+      const data = await ApiService.getAlerts();
+      if (Array.isArray(data)) {
+        setAlerts(data);
+      }
+    } catch (err) {
+      console.debug('Dynamic alerts fetch notice:', err);
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDynamicAlerts();
+    // Refresh alerts periodically to sync with webhook arrivals
+    const interval = setInterval(fetchDynamicAlerts, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const getSeverityBadge = (severity: IncidentSeverity) => {
     switch (severity) {
       case 'CRITICAL':
@@ -99,6 +74,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
           </span>
         );
       case 'LOW':
+      default:
         return (
           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#E0F2FE] dark:bg-sky-950/60 text-[#0284C7] dark:text-sky-400 border border-[#BAE6FD] dark:border-sky-800/40 tracking-wide font-mono">
             LOW
@@ -116,6 +92,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
       case 'MEDIUM':
         return <AlertCircle className="w-3.5 h-3.5 text-[#CA8A04] dark:text-yellow-400" />;
       case 'LOW':
+      default:
         return <Info className="w-3.5 h-3.5 text-[#0284C7] dark:text-sky-400" />;
     }
   };
@@ -123,7 +100,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
   return (
     <div
       id="active-alert-stream-card"
-      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-xl p-3.5 shadow-sm flex flex-col justify-between transition-colors duration-300"
+      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-xl p-3.5 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px]"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
@@ -136,81 +113,105 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
               TELEMETRY ALERTS
             </h2>
             <p className="text-[10px] text-[#64748B] dark:text-zinc-400 font-medium leading-none mt-0.5">
-              Click alert to triage scenario
+              Live database stream from Prometheus & Webhooks
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={fetchDynamicAlerts}
+            title="Refresh alerts from database"
+            className="p-1 text-slate-400 dark:text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+          >
+            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </button>
           <span className="flex items-center gap-1 text-[10px] font-semibold text-[#16A34A] dark:text-emerald-400 bg-[#DCFCE7] dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-[#BBF7D0] dark:border-emerald-800/40">
             <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] dark:bg-emerald-400 animate-pulse" />
-            Live eBPF
+            Live DB Feed
           </span>
         </div>
       </div>
 
       {/* Alert List Items */}
-      <div className="flex flex-col gap-1.5 my-1">
-        {telemetryAlertsList.map((alert) => {
-          const isSelected = alert.experimentId === currentExperimentId;
+      <div className="flex flex-col gap-1.5 my-1 flex-1 justify-center">
+        {isLoading ? (
+          <div className="py-8 text-center text-[11px] text-slate-400 dark:text-zinc-500 font-mono">
+            Loading alerts from PostgreSQL...
+          </div>
+        ) : alerts.length === 0 ? (
+          <div className="py-6 flex flex-col items-center justify-center text-center p-4 rounded-xl border border-dashed border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/10">
+            <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-1.5" />
+            <span className="text-[11.5px] font-bold text-emerald-800 dark:text-emerald-300">
+              No Active Firing Alerts
+            </span>
+            <p className="text-[10px] text-emerald-600 dark:text-emerald-400/80 font-mono mt-0.5 max-w-[260px]">
+              PostgreSQL alerts table is nominal. Inbound webhook alerts will appear here in real time.
+            </p>
+          </div>
+        ) : (
+          alerts.slice(0, 5).map((alert) => {
+            const isSelected = alert.experimentId === currentExperimentId;
 
-          return (
-            <button
-              type="button"
-              key={alert.id}
-              id={`alert-row-${alert.id}`}
-              onClick={() => onSelectAlert(alert.experimentId)}
-              className={`w-full text-left flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer group ${
-                isSelected
-                  ? 'border-[#16A34A] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/30 shadow-[0_0_0_1px_#16A34A] dark:shadow-[0_0_0_1px_#10B981]'
-                  : 'border-[#E2E8F0] dark:border-white/[0.08] bg-white dark:bg-[#0E121B] hover:border-[#94A3B8] dark:hover:border-white/[0.18] hover:bg-[#F8FAFC] dark:hover:bg-[#141A26]'
-              }`}
-            >
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="flex-shrink-0">{getSeverityIcon(alert.severity)}</div>
-                <div className="flex-shrink-0">{getSeverityBadge(alert.severity)}</div>
-                <div className="flex flex-col min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-[11px] font-bold leading-tight truncate ${isSelected ? 'text-[#14532D] dark:text-emerald-300' : 'text-[#0F172A] dark:text-zinc-200'}`}>
-                      {alert.title}
-                    </span>
-                    {isSelected && (
-                      <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-[#16A34A] dark:bg-emerald-500 text-white flex-shrink-0">
-                        ACTIVE
+            return (
+              <button
+                type="button"
+                key={alert.id}
+                id={`alert-row-${alert.id}`}
+                onClick={() => onSelectAlert(alert.experimentId)}
+                className={`w-full text-left flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer group ${
+                  isSelected
+                    ? 'border-[#16A34A] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/30 shadow-[0_0_0_1px_#16A34A] dark:shadow-[0_0_0_1px_#10B981]'
+                    : 'border-[#E2E8F0] dark:border-white/[0.08] bg-white dark:bg-[#0E121B] hover:border-[#94A3B8] dark:hover:border-white/[0.18] hover:bg-[#F8FAFC] dark:hover:bg-[#141A26]'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="flex-shrink-0">{getSeverityIcon(alert.severity)}</div>
+                  <div className="flex-shrink-0">{getSeverityBadge(alert.severity)}</div>
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[11px] font-bold leading-tight truncate ${isSelected ? 'text-[#14532D] dark:text-emerald-300' : 'text-[#0F172A] dark:text-zinc-200'}`}>
+                        {alert.title}
                       </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[9.5px] font-mono text-[#64748B] dark:text-zinc-400 font-medium leading-none">
-                      {alert.service}
-                    </span>
-                    <span className="text-[9px] font-mono text-[#94A3B8] dark:text-zinc-500 leading-none">
-                      · {alert.metric}
-                    </span>
+                      {isSelected && (
+                        <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-[#16A34A] dark:bg-emerald-500 text-white flex-shrink-0">
+                          SELECTED
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[9.5px] font-mono text-[#64748B] dark:text-zinc-400 font-medium leading-none">
+                        {alert.service}
+                      </span>
+                      <span className="text-[9px] font-mono text-[#94A3B8] dark:text-zinc-500 leading-none truncate max-w-[140px]">
+                        · {alert.metric}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                <span className="text-[10px] text-[#64748B] dark:text-zinc-400 font-mono whitespace-nowrap">
-                  {alert.timeAgo}
-                </span>
-                <ChevronRight
-                  className={`w-3.5 h-3.5 transition-transform ${
-                    isSelected
-                      ? 'text-[#16A34A] dark:text-emerald-400 translate-x-0.5'
-                      : 'text-[#94A3B8] dark:text-zinc-500 group-hover:text-[#0F172A] dark:group-hover:text-white'
-                  }`}
-                />
-              </div>
-            </button>
-          );
-        })}
+                <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                  <span className="text-[10px] text-[#64748B] dark:text-zinc-400 font-mono whitespace-nowrap">
+                    {alert.timeAgo}
+                  </span>
+                  <ChevronRight
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      isSelected
+                        ? 'text-[#16A34A] dark:text-emerald-400 translate-x-0.5'
+                        : 'text-[#94A3B8] dark:text-zinc-500 group-hover:text-[#0F172A] dark:group-hover:text-white'
+                    }`}
+                  />
+                </div>
+              </button>
+            );
+          })
+        )}
       </div>
 
       {/* Footer Info */}
       <div className="pt-2 mt-1 border-t border-[#E2E8F0] dark:border-white/[0.08] flex items-center justify-between text-[10px] text-[#64748B] dark:text-zinc-400">
-        <span className="font-mono">5 active feeds connected</span>
+        <span className="font-mono">{alerts.length} alerts loaded from database</span>
         <button
           type="button"
           onClick={onOpenDossier}
@@ -223,4 +224,3 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
     </div>
   );
 };
-
