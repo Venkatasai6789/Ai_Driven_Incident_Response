@@ -1,22 +1,17 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Globe,
   Database,
   Cpu,
   Layers,
   Activity,
-  Maximize2,
-  Minimize2,
   Flame,
   CheckCircle,
-  AlertTriangle,
   Zap,
   Server,
   ShieldCheck,
   Send,
-  X,
-  Bell,
 } from 'lucide-react';
 import type { SystemTopologyProps } from '../../types';
 
@@ -33,10 +28,10 @@ interface MeshNode {
   baseUptime: string;
   errorRate: string;
   namespace: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  leftPercent: string;
+  topPx: number;
+  widthPercent: string;
+  heightPx: number;
 }
 
 export const SystemTopology: React.FC<SystemTopologyProps> = ({
@@ -46,15 +41,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
   currentStep = 0,
   isLoading = false,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string>('checkout-service');
-  const [viewMode, setViewMode] = useState<'ecosystem' | 'blast-radius' | 'sre-pipeline'>('ecosystem');
 
   const isNominal = !activeIncident || activeIncident.status === 'RESOLVED';
   const incidentService = !isNominal ? activeIncident?.impactedService || 'checkout-service' : null;
 
-  // 7 Application Architecture Nodes
+  // 7 Application Architecture Nodes with responsive percentage positioning
   const nodes: MeshNode[] = [
+    // Top Row: Core Workloads (3 Nodes)
     {
       id: 'api-gateway',
       name: 'API Gateway (Envoy)',
@@ -68,10 +62,10 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '99.99%',
       errorRate: '0.00%',
       namespace: 'ingress',
-      x: 15,
-      y: 20,
-      width: 210,
-      height: 72,
+      leftPercent: '2%',
+      topPx: 16,
+      widthPercent: '28%',
+      heightPx: 82,
     },
     {
       id: 'checkout-service',
@@ -92,10 +86,10 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: isNominal ? '99.95%' : '84.2%',
       errorRate: isNominal ? '0.00%' : '38.4%',
       namespace: 'workloads',
-      x: 265,
-      y: 20,
-      width: 210,
-      height: 72,
+      leftPercent: '36%',
+      topPx: 16,
+      widthPercent: '28%',
+      heightPx: 82,
     },
     {
       id: 'postgresql',
@@ -116,11 +110,13 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '99.99%',
       errorRate: isNominal ? '0.00%' : '14.2%',
       namespace: 'database',
-      x: 515,
-      y: 20,
-      width: 210,
-      height: 72,
+      leftPercent: '70%',
+      topPx: 16,
+      widthPercent: '28%',
+      heightPx: 82,
     },
+
+    // Bottom Row: Telemetry, AI Triage, AST Guardrail & Telegram Dispatch (4 Nodes)
     {
       id: 'alert-webhook',
       name: 'Alert Ingest (Prometheus)',
@@ -134,10 +130,10 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'telemetry',
-      x: 15,
-      y: 135,
-      width: 160,
-      height: 72,
+      leftPercent: '2%',
+      topPx: 142,
+      widthPercent: '22%',
+      heightPx: 82,
     },
     {
       id: 'rag-ai-agent',
@@ -152,10 +148,10 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'ai-core',
-      x: 200,
-      y: 135,
-      width: 160,
-      height: 72,
+      leftPercent: '26.5%',
+      topPx: 142,
+      widthPercent: '22%',
+      heightPx: 82,
     },
     {
       id: 'fastapi-dispatcher',
@@ -170,10 +166,10 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'automation',
-      x: 385,
-      y: 135,
-      width: 160,
-      height: 72,
+      leftPercent: '51%',
+      topPx: 142,
+      widthPercent: '22%',
+      heightPx: 82,
     },
     {
       id: 'telegram-notifier',
@@ -188,10 +184,10 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       baseUptime: '100.0%',
       errorRate: '0.00%',
       namespace: 'channels',
-      x: 570,
-      y: 135,
-      width: 155,
-      height: 72,
+      leftPercent: '75.5%',
+      topPx: 142,
+      widthPercent: '22.5%',
+      heightPx: 82,
     },
   ];
 
@@ -202,32 +198,17 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
     if (onSelectService) onSelectService(nodeId);
   };
 
-  // Mathematical SVG Connection Points
-  const pGwRight = { x: 225, y: 56 };
-  const pCheckoutLeft = { x: 265, y: 56 };
-  const pCheckoutRight = { x: 475, y: 56 };
-  const pDbLeft = { x: 515, y: 56 };
-  const pCheckoutBottom = { x: 370, y: 92 };
-  const pAlertTop = { x: 95, y: 135 };
-  const pAlertRight = { x: 175, y: 171 };
-  const pRagLeft = { x: 200, y: 171 };
-  const pRagRight = { x: 360, y: 171 };
-  const pGuardrailLeft = { x: 385, y: 171 };
-  const pGuardrailRight = { x: 545, y: 171 };
-  const pTelegramLeft = { x: 570, y: 171 };
-  const pGuardrailTop = { x: 465, y: 135 };
-
-  // SVG Paths
-  const pathGwToCheckout = `M ${pGwRight.x} ${pGwRight.y} L ${pCheckoutLeft.x} ${pCheckoutLeft.y}`;
-  const pathCheckoutToDb = `M ${pCheckoutRight.x} ${pCheckoutRight.y} L ${pDbLeft.x} ${pDbLeft.y}`;
-  const pathCheckoutToAlert = `M ${pCheckoutBottom.x} ${pCheckoutBottom.y} C ${pCheckoutBottom.x} 115, ${pAlertTop.x} 110, ${pAlertTop.x} ${pAlertTop.y}`;
-  const pathAlertToRag = `M ${pAlertRight.x} ${pAlertRight.y} L ${pRagLeft.x} ${pRagLeft.y}`;
-  const pathRagToGuardrail = `M ${pRagRight.x} ${pRagRight.y} L ${pGuardrailLeft.x} ${pGuardrailLeft.y}`;
-  const pathGuardrailToTelegram = `M ${pGuardrailRight.x} ${pGuardrailRight.y} L ${pTelegramLeft.x} ${pTelegramLeft.y}`;
-  const pathGuardrailToCheckout = `M ${pGuardrailTop.x} ${pGuardrailTop.y} C ${pGuardrailTop.x} 110, ${pCheckoutRight.x - 40} 115, ${pCheckoutRight.x - 40} ${pCheckoutBottom.y}`;
+  // Mathematical SVG Connection Coordinates in a 1000 x 240 canvas
+  const pathGwToCheckout = 'M 300 57 L 360 57';
+  const pathCheckoutToDb = 'M 640 57 L 700 57';
+  const pathCheckoutToAlert = 'M 500 98 C 500 125, 130 115, 130 142';
+  const pathAlertToRag = 'M 240 183 L 265 183';
+  const pathRagToGuardrail = 'M 485 183 L 510 183';
+  const pathGuardrailToTelegram = 'M 730 183 L 755 183';
+  const pathGuardrailToCheckout = 'M 620 142 C 620 120, 560 120, 560 98';
 
   const renderIcon = (type: string, isCrit: boolean, isAct: boolean) => {
-    const iconClass = `w-3.5 h-3.5 ${
+    const iconClass = `w-4 h-4 ${
       isCrit
         ? 'text-rose-500'
         : isAct
@@ -248,83 +229,73 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       case 'guardrail':
         return <ShieldCheck className={iconClass} />;
       case 'telegram':
-        return <Send className="w-3.5 h-3.5 text-sky-500" />;
+        return <Send className="w-4 h-4 text-sky-500" />;
       default:
         return <Server className={iconClass} />;
     }
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#0B0F17] rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-4 shadow-sm relative overflow-hidden transition-colors">
-      {/* 1. Header with Title, Mode Pill, and Expand Button */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06] mb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center">
-            <Layers className="w-4 h-4 text-emerald-500" />
+    <div className="flex flex-col w-full bg-white dark:bg-[#0B0F17] rounded-2xl border border-slate-200/80 dark:border-white/[0.08] p-4.5 shadow-sm relative overflow-hidden transition-colors">
+      {/* 1. Header with Title & Status Pill */}
+      <div className="flex items-center justify-between pb-3.5 border-b border-slate-100 dark:border-white/[0.06] mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 flex items-center justify-center shadow-xs">
+            <Layers className="w-4.5 h-4.5 text-emerald-500" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-zinc-100">
-                Distributed Service Mesh Topology
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-zinc-100">
+                DISTRIBUTED SERVICE MESH TOPOLOGY
               </h2>
-              <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 eBPF Live
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">
-              mTLS Encrypted · Real-Time Incident Propagation · Telegram Commander
+            <p className="text-[10.5px] text-slate-400 dark:text-zinc-500 font-mono mt-0.5">
+              mTLS Encrypted · Real-Time Incident Propagation · Telegram SRE Commander
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Status Indicator */}
           {!isNominal ? (
-            <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[10px] font-mono font-bold flex items-center gap-1 animate-pulse">
-              <Flame className="w-3 h-3 text-rose-500" />
+            <span className="px-3 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-mono font-bold flex items-center gap-1.5 animate-pulse shadow-xs">
+              <Flame className="w-3.5 h-3.5 text-rose-500" />
               <span>Incident Alert Active</span>
             </span>
           ) : (
-            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold flex items-center gap-1">
-              <CheckCircle className="w-3 h-3 text-emerald-500" />
-              <span>Mesh Nominal</span>
+            <span className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-mono font-bold flex items-center gap-1.5 shadow-xs">
+              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Mesh 100% Nominal</span>
             </span>
           )}
-
-          {/* Expand Fullscreen Button */}
-          <button
-            onClick={() => setIsExpanded(true)}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
-            title="Expand Service Mesh Topology"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
-      {/* 2. Interactive SVG Canvas & Modern Card Overlay */}
-      <div className="relative w-full h-[225px] bg-[#F8FAFC]/90 dark:bg-[#070A10]/90 rounded-xl border border-slate-200/60 dark:border-white/[0.04] overflow-hidden">
+      {/* 2. Interactive Responsive Topology Canvas */}
+      <div className="relative w-full h-[245px] bg-[#F8FAFC]/90 dark:bg-[#070A10]/90 rounded-xl border border-slate-200/60 dark:border-white/[0.04] overflow-hidden">
         {isLoading ? (
           <div className="w-full h-full flex flex-col justify-between p-4">
             <div className="grid grid-cols-3 gap-4">
-              <div className="h-16 rounded-xl skeleton-shimmer" />
-              <div className="h-16 rounded-xl skeleton-shimmer" />
-              <div className="h-16 rounded-xl skeleton-shimmer" />
+              <div className="h-20 rounded-2xl skeleton-shimmer" />
+              <div className="h-20 rounded-2xl skeleton-shimmer" />
+              <div className="h-20 rounded-2xl skeleton-shimmer" />
             </div>
             <div className="grid grid-cols-4 gap-3">
-              <div className="h-16 rounded-xl skeleton-shimmer" />
-              <div className="h-16 rounded-xl skeleton-shimmer" />
-              <div className="h-16 rounded-xl skeleton-shimmer" />
-              <div className="h-16 rounded-xl skeleton-shimmer" />
+              <div className="h-20 rounded-2xl skeleton-shimmer" />
+              <div className="h-20 rounded-2xl skeleton-shimmer" />
+              <div className="h-20 rounded-2xl skeleton-shimmer" />
+              <div className="h-20 rounded-2xl skeleton-shimmer" />
             </div>
           </div>
         ) : (
           <>
-            {/* SVG Dynamic Conduits & Animated Particles */}
+            {/* SVG Dynamic Conduits & Animated Particle Laser Flows */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
-              viewBox="0 0 740 225"
-              preserveAspectRatio="xMidYMid meet"
+              viewBox="0 0 1000 240"
+              preserveAspectRatio="none"
             >
               <defs>
                 <linearGradient id="laserNominal" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -378,7 +349,6 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <circle r="3.5" fill={incidentService === 'checkout-service' ? '#EF4444' : '#10B981'}>
                 <animateMotion dur="1.2s" repeatCount="indefinite" path={pathGwToCheckout} />
               </circle>
-              <circle cx={(pGwRight.x + pCheckoutLeft.x) / 2} cy={pGwRight.y} r="2" fill="#10B981" />
 
               {/* 2. Checkout -> PostgreSQL */}
               <path
@@ -401,7 +371,6 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
               <circle r="3.5" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'}>
                 <animateMotion dur="1.4s" repeatCount="indefinite" path={pathCheckoutToDb} />
               </circle>
-              <circle cx={(pCheckoutRight.x + pDbLeft.x) / 2} cy={pCheckoutRight.y} r="2" fill="#10B981" />
 
               {/* 3. Incident Telemetry Conduit: Checkout -> Alert Webhook */}
               <path
@@ -451,7 +420,6 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                   <animateMotion dur="0.8s" repeatCount="indefinite" path={pathAlertToRag} />
                 </circle>
               )}
-              <circle cx={(pAlertRight.x + pRagLeft.x) / 2} cy={pAlertRight.y} r="2" fill="#6366F1" />
 
               {/* 5. Gemini RAG Agent -> Safety Guardrail */}
               <path
@@ -475,7 +443,6 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                   <animateMotion dur="0.8s" repeatCount="indefinite" path={pathRagToGuardrail} />
                 </circle>
               )}
-              <circle cx={(pRagRight.x + pGuardrailLeft.x) / 2} cy={pRagRight.y} r="2" fill="#10B981" />
 
               {/* 6. Safety Guardrail -> Telegram Notifier (@AuroraSREBot) */}
               <path
@@ -499,27 +466,21 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                   <animateMotion dur="0.7s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
                 </circle>
               )}
-              <circle cx={(pGuardrailRight.x + pTelegramLeft.x) / 2} cy={pGuardrailRight.y} r="2.5" fill="#0EA5E9" />
 
               {/* 7. Remediation Feedback Loop: Safety Guardrail -> Checkout Service */}
-              {viewMode !== 'blast-radius' && (
+              {currentStep >= 4 && (
                 <>
-                  <path d={pathGuardrailToCheckout} fill="none" stroke="#E2E8F0" strokeWidth="1.5" strokeDasharray="3 3" className="dark:stroke-zinc-800" />
-                  {currentStep >= 4 && (
-                    <>
-                      <path
-                        d={pathGuardrailToCheckout}
-                        fill="none"
-                        stroke="#10B981"
-                        strokeWidth="2"
-                        strokeDasharray="4 4"
-                        className="animate-laser-flow"
-                      />
-                      <circle r="3" fill="#10B981">
-                        <animateMotion dur="0.9s" repeatCount="indefinite" path={pathGuardrailToCheckout} />
-                      </circle>
-                    </>
-                  )}
+                  <path
+                    d={pathGuardrailToCheckout}
+                    fill="none"
+                    stroke="#10B981"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                    className="animate-laser-flow"
+                  />
+                  <circle r="3" fill="#10B981">
+                    <animateMotion dur="0.9s" repeatCount="indefinite" path={pathGuardrailToCheckout} />
+                  </circle>
                 </>
               )}
             </svg>
@@ -538,12 +499,12 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                     onClick={() => handleNodeClick(node.id)}
                     whileHover={{ y: -2, transition: { duration: 0.15 } }}
                     style={{
-                      left: `${node.x}px`,
-                      top: `${node.y}px`,
-                      width: `${node.width}px`,
-                      height: `${node.height}px`,
+                      left: node.leftPercent,
+                      top: `${node.topPx}px`,
+                      width: node.widthPercent,
+                      height: `${node.heightPx}px`,
                     }}
-                    className={`absolute rounded-2xl p-2.5 flex flex-col justify-between cursor-pointer transition-all duration-200 ${
+                    className={`absolute rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all duration-200 ${
                       isCrit
                         ? 'bg-white dark:bg-[#12080C] border-2 border-rose-500 shadow-[0_0_20px_rgba(244,63,94,0.35)] ring-2 ring-rose-400/40'
                         : isDeg
@@ -558,10 +519,10 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                     }`}
                   >
                     {/* Top Row: Icon Badge + Node Title + Status Pill */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 truncate">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div
-                          className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 ${
                             isCrit
                               ? 'bg-rose-100 dark:bg-rose-950/80'
                               : isAct && node.id === 'telegram-notifier'
@@ -573,14 +534,14 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                         >
                           {renderIcon(node.iconType, isCrit, isAct)}
                         </div>
-                        <span className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                           {node.shortName}
                         </span>
                       </div>
 
-                      {/* Status indicator pill */}
+                      {/* Latency / Response Pill */}
                       <span
-                        className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-md ${
+                        className={`text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-md flex-shrink-0 ${
                           isCrit
                             ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
                             : isDeg
@@ -595,7 +556,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                     </div>
 
                     {/* Bottom Row: Protocol / Runtime Chip + Telemetry Tag */}
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-white/[0.06] text-[9px] font-mono">
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-white/[0.06] text-[10px] font-mono">
                       <span className="text-slate-500 dark:text-zinc-400 truncate">
                         {node.protocol}
                       </span>
@@ -605,6 +566,8 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
                             ? 'text-rose-600 dark:text-rose-400 font-bold'
                             : isAct && node.id === 'telegram-notifier'
                             ? 'text-sky-600 dark:text-sky-400 font-bold animate-pulse'
+                            : isDeg
+                            ? 'text-amber-600 dark:text-amber-400 font-bold'
                             : 'text-slate-700 dark:text-zinc-300'
                         }`}
                       >
@@ -620,18 +583,18 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
       </div>
 
       {/* 3. Bottom Selected Node Telemetry Strip */}
-      <div className="mt-2 bg-slate-900 dark:bg-[#070A10] border border-slate-800 dark:border-white/[0.08] text-white rounded-xl px-3.5 py-2 flex items-center justify-between text-[11px] shadow-2xs">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-5 h-5 rounded-md bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+      <div className="mt-3 bg-slate-900 dark:bg-[#070A10] border border-slate-800 dark:border-white/[0.08] text-white rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs shadow-xs">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
             {renderIcon(selectedNode.iconType, selectedNode.status === 'CRITICAL', selectedNode.status === 'ACTIVE')}
           </div>
-          <div className="truncate">
-            <span className="font-bold text-slate-100">{selectedNode.name}</span>
-            <span className="text-[10px] text-slate-400 font-mono ml-2">[{selectedNode.namespace}]</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-bold text-slate-100 truncate">{selectedNode.name}</span>
+            <span className="text-[10.5px] text-slate-400 font-mono">[{selectedNode.namespace}]</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-[10.5px] font-mono flex-shrink-0">
+        <div className="flex items-center gap-4 text-xs font-mono flex-shrink-0">
           <span className="text-slate-400">
             Latency: <b className="text-emerald-400">{selectedNode.latency}ms</b>
           </span>
@@ -642,7 +605,7 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
             Resource: <b className="text-slate-200">{selectedNode.baseResource}</b>
           </span>
           <span
-            className={`px-2 py-0.5 rounded text-[9.5px] font-bold ${
+            className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold ${
               selectedNode.status === 'CRITICAL'
                 ? 'bg-rose-500 text-white'
                 : selectedNode.status === 'DEGRADED'
@@ -654,188 +617,6 @@ export const SystemTopology: React.FC<SystemTopologyProps> = ({
           </span>
         </div>
       </div>
-
-      {/* 4. High-Craft Simplified Fullscreen Expand Modal */}
-      <AnimatePresence>
-        {isExpanded && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsExpanded(false)}
-              className="fixed inset-0 bg-black/70 dark:bg-black/85 backdrop-blur-xs"
-            />
-
-            {/* Modal Canvas Window */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.2 }}
-              className="relative w-full max-w-5xl h-[80vh] bg-white dark:bg-[#090C14] border border-slate-200 dark:border-white/[0.1] rounded-3xl shadow-2xl flex flex-col overflow-hidden z-10"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-white/[0.08]">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      Distributed Service Mesh Architecture
-                    </h3>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400">
-                      Live eBPF Telemetry · Real-Time Incident Propagation · Telegram Commander Dispatch
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-slate-400">Press ESC to close</span>
-                  <button
-                    onClick={() => setIsExpanded(false)}
-                    className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Modal Body: Spacious Topology Canvas */}
-              <div className="flex-1 relative overflow-hidden bg-[#FAFBFC] dark:bg-[#070A10] p-6 flex items-center justify-center">
-                <div className="w-full max-w-4xl h-[420px] relative">
-                  {/* Reuse SVG & Conduits scaled up nicely */}
-                  <svg className="absolute inset-0 w-full h-full" viewBox="0 0 740 230" preserveAspectRatio="xMidYMid meet">
-                    <defs>
-                      <linearGradient id="expNominal" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#10B981" stopOpacity="0.8" />
-                        <stop offset="50%" stopColor="#34D399" stopOpacity="1" />
-                        <stop offset="100%" stopColor="#10B981" stopOpacity="0.8" />
-                      </linearGradient>
-                      <linearGradient id="expCritical" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#F43F5E" stopOpacity="0.9" />
-                        <stop offset="50%" stopColor="#EF4444" stopOpacity="1" />
-                        <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.9" />
-                      </linearGradient>
-                      <linearGradient id="expAI" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#6366F1" stopOpacity="0.9" />
-                        <stop offset="50%" stopColor="#8B5CF6" stopOpacity="1" />
-                        <stop offset="100%" stopColor="#0EA5E9" stopOpacity="0.9" />
-                      </linearGradient>
-                    </defs>
-
-                    {/* Conduits */}
-                    <path d={pathGwToCheckout} fill="none" stroke="#E2E8F0" strokeWidth="3" className="dark:stroke-zinc-800" />
-                    <path d={pathGwToCheckout} fill="none" stroke={incidentService === 'checkout-service' ? 'url(#expCritical)' : 'url(#expNominal)'} strokeWidth="3" strokeDasharray="6 6" className="animate-laser-flow" />
-                    <circle r="4" fill={incidentService === 'checkout-service' ? '#EF4444' : '#10B981'}>
-                      <animateMotion dur="1.2s" repeatCount="indefinite" path={pathGwToCheckout} />
-                    </circle>
-
-                    <path d={pathCheckoutToDb} fill="none" stroke="#E2E8F0" strokeWidth="3" className="dark:stroke-zinc-800" />
-                    <path d={pathCheckoutToDb} fill="none" stroke={incidentService === 'postgresql' ? 'url(#expCritical)' : 'url(#expNominal)'} strokeWidth="3" strokeDasharray="6 6" className="animate-laser-flow" />
-                    <circle r="4" fill={incidentService === 'postgresql' ? '#EF4444' : '#10B981'}>
-                      <animateMotion dur="1.4s" repeatCount="indefinite" path={pathCheckoutToDb} />
-                    </circle>
-
-                    <path d={pathCheckoutToAlert} fill="none" stroke="#CBD5E1" strokeWidth="2.5" strokeDasharray="4 4" className="dark:stroke-zinc-800" />
-                    {!isNominal && (
-                      <circle r="3.5" fill="#EF4444">
-                        <animateMotion dur="0.9s" repeatCount="indefinite" path={pathCheckoutToAlert} />
-                      </circle>
-                    )}
-
-                    <path d={pathAlertToRag} fill="none" stroke="#E2E8F0" strokeWidth="3" className="dark:stroke-zinc-800" />
-                    <path d={pathAlertToRag} fill="none" stroke="url(#expAI)" strokeWidth="3" strokeDasharray="6 6" className="animate-laser-flow" />
-                    <circle r="4" fill="#6366F1">
-                      <animateMotion dur="0.8s" repeatCount="indefinite" path={pathAlertToRag} />
-                    </circle>
-
-                    <path d={pathRagToGuardrail} fill="none" stroke="#E2E8F0" strokeWidth="3" className="dark:stroke-zinc-800" />
-                    <path d={pathRagToGuardrail} fill="none" stroke="url(#expAI)" strokeWidth="3" strokeDasharray="6 6" className="animate-laser-flow" />
-                    <circle r="4" fill="#10B981">
-                      <animateMotion dur="0.8s" repeatCount="indefinite" path={pathRagToGuardrail} />
-                    </circle>
-
-                    <path d={pathGuardrailToTelegram} fill="none" stroke="#E2E8F0" strokeWidth="3" className="dark:stroke-zinc-800" />
-                    <path d={pathGuardrailToTelegram} fill="none" stroke="url(#expAI)" strokeWidth="3" strokeDasharray="6 6" className="animate-laser-flow" />
-                    <circle r="4" fill="#0EA5E9">
-                      <animateMotion dur="0.7s" repeatCount="indefinite" path={pathGuardrailToTelegram} />
-                    </circle>
-                  </svg>
-
-                  {/* DOM Nodes in Expanded Canvas */}
-                  <div className="absolute inset-0 pointer-events-auto">
-                    {nodes.map((node) => {
-                      const isSelected = selectedNode?.id === node.id;
-                      const isCrit = node.status === 'CRITICAL';
-                      const isAct = node.status === 'ACTIVE';
-
-                      return (
-                        <div
-                          key={'exp-' + node.id}
-                          onClick={() => handleNodeClick(node.id)}
-                          style={{
-                            left: `${node.x}px`,
-                            top: `${node.y}px`,
-                            width: `${node.width}px`,
-                            height: `${node.height}px`,
-                          }}
-                          className={`absolute rounded-2xl p-3 flex flex-col justify-between cursor-pointer transition-all ${
-                            isCrit
-                              ? 'bg-white dark:bg-[#12080C] border-2 border-rose-500 shadow-xl ring-2 ring-rose-400/40'
-                              : isAct && node.id === 'telegram-notifier'
-                              ? 'bg-white dark:bg-[#080E14] border-2 border-sky-500 shadow-xl ring-2 ring-sky-400/40'
-                              : isSelected
-                              ? 'bg-white dark:bg-[#0B0F17] border-2 border-emerald-500 shadow-lg ring-2 ring-emerald-400/20'
-                              : 'bg-white dark:bg-[#0E121B] border border-slate-200 dark:border-white/[0.08] shadow-sm'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-center">
-                                {renderIcon(node.iconType, isCrit, isAct)}
-                              </div>
-                              <span className="text-xs font-bold text-slate-900 dark:text-white">
-                                {node.shortName}
-                              </span>
-                            </div>
-                            <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                              {node.latency}ms
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-white/[0.06] text-[9.5px] font-mono text-slate-500 dark:text-zinc-400">
-                            <span>{node.protocol}</span>
-                            <span className="font-semibold">{node.throughput}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer: Clean Selected Node Bar */}
-              <div className="px-6 py-3 bg-slate-50 dark:bg-[#070A10] border-t border-slate-100 dark:border-white/[0.08] flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-slate-900 dark:text-white">{selectedNode.name}</span>
-                  <span className="text-slate-500 font-mono">[{selectedNode.namespace}]</span>
-                  <span className="text-slate-500">Uptime: <b className="text-slate-800 dark:text-zinc-200">{selectedNode.baseUptime}</b></span>
-                </div>
-
-                <button
-                  onClick={() => setIsExpanded(false)}
-                  className="px-4 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold rounded-xl text-xs hover:opacity-90 transition-opacity cursor-pointer"
-                >
-                  Close View
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

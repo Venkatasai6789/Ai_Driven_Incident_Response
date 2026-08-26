@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, AlertTriangle, AlertCircle, Info, Radio, Activity, Sparkles, CheckCircle2, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  ChevronRight,
+  AlertTriangle,
+  AlertCircle,
+  Info,
+  CheckCircle2,
+  RefreshCw,
+  Trash2,
+  Activity,
+} from 'lucide-react';
 import { IncidentSeverity } from '../../types';
 import { ApiService } from '../../services/api';
 
@@ -74,26 +83,26 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
     switch (severity) {
       case 'CRITICAL':
         return (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#FEE2E2] dark:bg-rose-950/60 text-[#DC2626] dark:text-rose-400 border border-[#FECACA] dark:border-rose-800/40 tracking-wide font-mono">
+          <span className="px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-rose-100 dark:bg-rose-950/70 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40 tracking-wider font-mono uppercase">
             CRIT
           </span>
         );
       case 'HIGH':
         return (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#FEF3C7] dark:bg-amber-950/60 text-[#D97706] dark:text-amber-400 border border-[#FDE68A] dark:border-amber-800/40 tracking-wide font-mono">
+          <span className="px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/40 tracking-wider font-mono uppercase">
             HIGH
           </span>
         );
       case 'MEDIUM':
         return (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#FEF9C3] dark:bg-yellow-950/60 text-[#CA8A04] dark:text-yellow-400 border border-[#FEF08A] dark:border-yellow-800/40 tracking-wide font-mono">
+          <span className="px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-yellow-100 dark:bg-yellow-950/70 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800/40 tracking-wider font-mono uppercase">
             MED
           </span>
         );
       case 'LOW':
       default:
         return (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#E0F2FE] dark:bg-sky-950/60 text-[#0284C7] dark:text-sky-400 border border-[#BAE6FD] dark:border-sky-800/40 tracking-wide font-mono">
+          <span className="px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-sky-100 dark:bg-sky-950/70 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-800/40 tracking-wider font-mono uppercase">
             LOW
           </span>
         );
@@ -103,14 +112,14 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
   const getSeverityIcon = (severity: IncidentSeverity) => {
     switch (severity) {
       case 'CRITICAL':
-        return <AlertTriangle className="w-3.5 h-3.5 text-[#DC2626] dark:text-rose-400 fill-[#FEE2E2] dark:fill-rose-950/60" />;
+        return <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400 flex-shrink-0" />;
       case 'HIGH':
-        return <AlertTriangle className="w-3.5 h-3.5 text-[#D97706] dark:text-amber-400" />;
+        return <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />;
       case 'MEDIUM':
-        return <AlertCircle className="w-3.5 h-3.5 text-[#CA8A04] dark:text-yellow-400" />;
+        return <AlertCircle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />;
       case 'LOW':
       default:
-        return <Info className="w-3.5 h-3.5 text-[#0284C7] dark:text-sky-400" />;
+        return <Info className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 flex-shrink-0" />;
     }
   };
 
@@ -118,27 +127,29 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
     const s = (status || 'FIRING').toUpperCase();
     if (s === 'RESOLVED' || s === 'CLOSED' || s === 'NOMINAL') {
       return (
-        <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-300 dark:border-zinc-700 flex-shrink-0">
+        <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700 flex-shrink-0">
           CLOSED
         </span>
       );
     }
     if (s === 'INVESTIGATING' || s === 'TRIAGING') {
       return (
-        <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-sky-600 text-white flex-shrink-0">
+        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800 flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
           INVESTIGATING
         </span>
       );
     }
     if (s === 'ACTIVE' || s === 'FIRING' || s === 'OPEN') {
       return (
-        <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-rose-600 text-white flex-shrink-0">
+        <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-rose-600 text-white shadow-2xs flex-shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
           FIRING
         </span>
       );
     }
     return (
-      <span className="px-1 py-0.2 rounded text-[8.5px] font-mono font-bold bg-slate-200 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 flex-shrink-0">
+      <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 flex-shrink-0">
         {s}
       </span>
     );
@@ -147,66 +158,67 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
   return (
     <div
       id="active-alert-stream-card"
-      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-xl p-3.5 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px]"
+      className="bg-white dark:bg-[#090C14] border border-[#E2E8F0] dark:border-white/[0.08] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition-colors duration-300 min-h-[300px]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="px-1.5 py-0.5 rounded bg-[#0F172A] dark:bg-white/[0.08] text-white text-[10px] font-mono font-bold">
+      <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-100 dark:border-white/[0.06]">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-5 h-5 rounded-md bg-[#0F172A] dark:bg-white/[0.08] text-white text-[10px] font-mono font-bold flex items-center justify-center flex-shrink-0">
             3A
           </span>
-          <div>
-            <h2 className="text-[11.5px] font-bold text-[#0F172A] dark:text-white tracking-wider uppercase font-sans">
+          <div className="min-w-0">
+            <h2 className="text-[12px] font-bold text-[#0F172A] dark:text-white tracking-wider uppercase truncate">
               TELEMETRY ALERTS
             </h2>
-            <p className="text-[10px] text-[#64748B] dark:text-zinc-400 font-medium leading-none mt-0.5">
+            <p className="text-[10px] text-[#64748B] dark:text-zinc-400 font-medium leading-tight truncate mt-0.5">
               Live database stream from Prometheus & Webhooks
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        {/* Header Right Actions */}
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
           {alerts.length > 0 && (
             <button
               type="button"
               onClick={handleClearAlerts}
               title="Clear all alerts from database"
-              className="px-1.5 py-0.5 text-slate-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded border border-slate-200 dark:border-white/[0.08] transition-colors cursor-pointer flex items-center gap-1 text-[10px]"
+              className="px-2 py-1 text-slate-500 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg border border-slate-200 dark:border-white/[0.08] transition-colors cursor-pointer flex items-center gap-1 text-[10px]"
             >
               <Trash2 className="w-3 h-3" />
-              <span className="font-mono text-[9px] font-semibold">Clear</span>
+              <span className="font-mono text-[9.5px] font-semibold hidden sm:inline">Clear</span>
             </button>
           )}
           <button
             type="button"
             onClick={fetchDynamicAlerts}
             title="Refresh alerts from database"
-            className="p-1 text-slate-400 dark:text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+            className="p-1 text-slate-400 dark:text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
           >
-            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-[#16A34A] dark:text-emerald-400 bg-[#DCFCE7] dark:bg-emerald-950/50 px-2 py-0.5 rounded-full border border-[#BBF7D0] dark:border-emerald-800/40">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A] dark:bg-emerald-400 animate-pulse" />
+          <span className="whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/40 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Live DB Feed
           </span>
         </div>
       </div>
 
-      {/* Alert List Items */}
-      <div className="flex flex-col gap-1.5 my-1 flex-1 justify-center">
+      {/* Alert List Container */}
+      <div className="flex flex-col gap-2 my-1 flex-1 justify-center overflow-y-auto max-h-[220px] pr-0.5">
         {isLoading ? (
-          <div className="flex flex-col gap-1.5 w-full">
-            {[0, 1, 2, 3, 4].map((i) => (
+          <div className="flex flex-col gap-2 w-full">
+            {[0, 1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="w-full flex items-center justify-between p-2 rounded-lg border border-[#E2E8F0] dark:border-white/[0.08] bg-white dark:bg-[#0E121B]"
+                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0E121B]"
               >
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
                   <div className="w-3.5 h-3.5 rounded-full skeleton-shimmer flex-shrink-0" />
-                  <div className="w-8 h-4 rounded skeleton-shimmer flex-shrink-0" />
+                  <div className="w-10 h-4 rounded skeleton-shimmer flex-shrink-0" />
                   <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="w-36 h-3 rounded skeleton-shimmer" />
+                      <div className="w-32 h-3 rounded skeleton-shimmer" />
                       <div className="w-12 h-3 rounded skeleton-shimmer" />
                     </div>
                     <div className="w-24 h-2 rounded skeleton-shimmer" />
@@ -217,7 +229,7 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
             ))}
           </div>
         ) : alerts.length === 0 ? (
-          <div className="py-6 flex flex-col items-center justify-center text-center p-4 rounded-xl border border-dashed border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/10">
+          <div className="py-5 flex flex-col items-center justify-center text-center p-4 rounded-xl border border-dashed border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/40 dark:bg-emerald-950/10">
             <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-1.5" />
             <span className="text-[11.5px] font-bold text-emerald-800 dark:text-emerald-300">
               No Active Firing Alerts
@@ -228,7 +240,9 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
           </div>
         ) : (
           alerts.slice(0, 5).map((alert) => {
-            const isSelected = alert.id === selectedAlertId || alert.experimentId === currentExperimentId;
+            const isSelected = alert.id === selectedAlertId;
+            const isCrit = alert.severity === 'CRITICAL';
+            const isHigh = alert.severity === 'HIGH';
 
             return (
               <button
@@ -239,42 +253,65 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
                   setSelectedAlertId(alert.id);
                   onSelectAlert(alert.experimentId, alert.incident_id || alert.id, alert.status);
                 }}
-                className={`w-full text-left flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer group ${
+                className={`w-full text-left p-2.5 rounded-xl border transition-all cursor-pointer group flex flex-col gap-1.5 relative overflow-hidden ${
                   isSelected
-                    ? 'border-[#16A34A] dark:border-emerald-500 bg-[#F0FDF4] dark:bg-emerald-950/30 shadow-[0_0_0_1px_#16A34A] dark:shadow-[0_0_0_1px_#10B981]'
-                    : 'border-[#E2E8F0] dark:border-white/[0.08] bg-white dark:bg-[#0E121B] hover:border-[#94A3B8] dark:hover:border-white/[0.18] hover:bg-[#F8FAFC] dark:hover:bg-[#141A26]'
+                    ? 'border-emerald-500 dark:border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 shadow-[0_0_0_1px_rgba(16,185,129,0.3)]'
+                    : 'border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0E121B] hover:border-slate-300 dark:hover:border-white/[0.18] hover:bg-slate-50 dark:hover:bg-[#141A26] shadow-2xs'
                 }`}
               >
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <div className="flex-shrink-0">{getSeverityIcon(alert.severity)}</div>
-                  <div className="flex-shrink-0">{getSeverityBadge(alert.severity)}</div>
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`text-[11px] font-bold leading-tight truncate ${isSelected ? 'text-[#14532D] dark:text-emerald-300' : 'text-[#0F172A] dark:text-zinc-200'}`}>
-                        {alert.title}
-                      </span>
-                      {getStatusBadge(alert.status)}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9.5px] font-mono text-[#64748B] dark:text-zinc-400 font-medium leading-none">
-                        {alert.service}
-                      </span>
-                      <span className="text-[9px] font-mono text-[#94A3B8] dark:text-zinc-500 leading-none truncate max-w-[140px]">
-                        · {alert.metric}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                {/* Left Severity Accent Stripe */}
+                <div
+                  className={`absolute left-0 top-0 bottom-0 w-[3px] ${
+                    isCrit
+                      ? 'bg-rose-500'
+                      : isHigh
+                      ? 'bg-amber-500'
+                      : 'bg-sky-500'
+                  }`}
+                />
 
-                <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                  <span className="text-[10px] text-[#64748B] dark:text-zinc-400 font-mono whitespace-nowrap">
+                {/* Top Row: Severity + Title + Status Badge + Timestamp */}
+                <div className="flex items-center justify-between gap-2 pl-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    {getSeverityIcon(alert.severity)}
+                    {getSeverityBadge(alert.severity)}
+                    <span
+                      title={alert.title}
+                      className={`text-[11.5px] font-bold leading-tight truncate ${
+                        isSelected
+                          ? 'text-emerald-950 dark:text-emerald-200'
+                          : 'text-slate-900 dark:text-zinc-100'
+                      }`}
+                    >
+                      {alert.title}
+                    </span>
+                    {getStatusBadge(alert.status)}
+                  </div>
+
+                  <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-mono whitespace-nowrap flex-shrink-0">
                     {alert.timeAgo}
                   </span>
+                </div>
+
+                {/* Bottom Row: Service Chip + Metric Detail + Chevron */}
+                <div className="flex items-center justify-between gap-2 pl-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 font-mono text-[9.5px] font-medium truncate flex-shrink-0">
+                      {alert.service}
+                    </span>
+                    <span
+                      title={alert.metric}
+                      className="text-[9.5px] font-mono text-slate-500 dark:text-zinc-400 truncate leading-none"
+                    >
+                      {alert.metric}
+                    </span>
+                  </div>
+
                   <ChevronRight
-                    className={`w-3.5 h-3.5 transition-transform ${
+                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${
                       isSelected
-                        ? 'text-[#16A34A] dark:text-emerald-400 translate-x-0.5'
-                        : 'text-[#94A3B8] dark:text-zinc-500 group-hover:text-[#0F172A] dark:group-hover:text-white'
+                        ? 'text-emerald-600 dark:text-emerald-400 translate-x-0.5'
+                        : 'text-slate-400 dark:text-zinc-500 group-hover:text-slate-700 dark:group-hover:text-zinc-200'
                     }`}
                   />
                 </div>
@@ -285,14 +322,14 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
       </div>
 
       {/* Footer Info */}
-      <div className="pt-2 mt-1 border-t border-[#E2E8F0] dark:border-white/[0.08] flex items-center justify-between text-[10px] text-[#64748B] dark:text-zinc-400">
-        <span className={`font-mono ${alerts.length === 0 ? 'text-[#16A34A] dark:text-emerald-400 font-semibold' : ''}`}>
-          {alerts.length} alerts loaded from database {alerts.length === 0 ? '· Nominal Baseline' : ''}
+      <div className="pt-2 mt-1 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-[10.5px] text-slate-500 dark:text-zinc-400">
+        <span className={`font-mono ${alerts.length === 0 ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : ''}`}>
+          {alerts.length} active alerts in DB {alerts.length === 0 ? '· 100% Nominal' : ''}
         </span>
         <button
           type="button"
           onClick={onOpenDossier}
-          className="text-[#0F172A] dark:text-zinc-200 hover:text-[#16A34A] dark:hover:text-emerald-400 font-semibold hover:underline cursor-pointer flex items-center gap-1 transition-colors"
+          className="text-slate-800 dark:text-zinc-200 hover:text-emerald-600 dark:hover:text-emerald-400 font-semibold hover:underline cursor-pointer flex items-center gap-1 transition-colors"
         >
           <span>Open Full Stream</span>
           <ChevronRight className="w-3 h-3" />
@@ -301,3 +338,4 @@ export const ActiveAlertStream: React.FC<ActiveAlertStreamProps> = ({
     </div>
   );
 };
+

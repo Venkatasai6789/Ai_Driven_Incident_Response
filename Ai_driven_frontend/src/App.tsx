@@ -57,32 +57,64 @@ export default function App() {
       const fallback = fallbackExp || chaosExperiments[0];
       const service = triage?.service || fallback.service;
       const severity = triage?.severity || fallback.severity;
-      const confidence = triage?.confidence_score 
-        ? Math.round(triage.confidence_score * 1000) / 10 
-        : fallback.confidence;
 
+      // Normalize confidence score (prevent 9680% double-scaling bug)
+      const rawConf = (triage as any)?.confidence_score ?? (triage as any)?.confidence ?? fallback.confidence;
+      let parsedConf = typeof rawConf === 'number' ? rawConf : parseFloat(rawConf) || 96.8;
+      if (parsedConf > 100) {
+        parsedConf = parsedConf > 1000 ? parsedConf / 100 : parsedConf / 10;
+      } else if (parsedConf <= 1 && parsedConf > 0) {
+        parsedConf = parsedConf * 100;
+      }
+      const confidence = Math.min(100, Math.max(0, Math.round(parsedConf * 10) / 10));
+
+      // MTTR Duration calculation with solid fallback
+      const duration = (triage as any)?.execution_time_seconds
+        ? `${(triage as any).execution_time_seconds}s`
+        : (triage as any)?.duration
+        ? `${(triage as any).duration}`
+        : postMortem?.impact?.duration || (fallback?.duration || '1.4s');
+
+      const currentStepIdx = pipeline?.current_step_index ?? 3;
+      const defaultStepNames = ['Telemetry Ingest', 'Vector Runbook', 'Root Diagnostics', 'Safety Guardrail', 'Rolling Remediation', 'Health Verification'];
+      
       const steps = (pipeline?.steps && pipeline.steps.length > 0)
-        ? pipeline.steps.map((s, idx) => ({
-            id: s.step_number || idx + 1,
-            label: s.name,
-            sublabel: s.status === 'COMPLETED' ? 'Verified' : s.status === 'IN_PROGRESS' ? 'Active' : 'Pending',
-            time: s.executed_at ? new Date(s.executed_at).toLocaleTimeString() : undefined,
-            status: (s.status === 'COMPLETED' ? 'completed' : s.status === 'IN_PROGRESS' ? 'active' : 'pending') as 'completed' | 'active' | 'pending',
-          }))
-        : [
-            { id: 1, label: 'Telemetry Ingest', sublabel: 'Verified', time: '11:24:03', status: 'completed' as const },
-            { id: 2, label: 'Vector Runbook', sublabel: 'Verified', time: '11:24:04', status: 'completed' as const },
-            { id: 3, label: 'Root Diagnostics', sublabel: 'Verified', time: '11:24:05', status: 'completed' as const },
-            { id: 4, label: 'Safety Guardrail', sublabel: 'Verified', time: '11:24:06', status: 'completed' as const },
-            { id: 5, label: 'Rolling Remediation', sublabel: 'Executing', time: 'Live', status: 'active' as const },
-            { id: 6, label: 'Health Verification', sublabel: 'Pending', time: 'Pending', status: 'pending' as const },
-          ];
+        ? pipeline.steps.map((s, idx) => {
+            const isPast = idx < currentStepIdx;
+            const isCurrent = idx === currentStepIdx;
+            return {
+              id: s.step_number || idx + 1,
+              label: s.name || defaultStepNames[idx] || `Step ${idx + 1}`,
+              sublabel: isPast ? 'Verified' : isCurrent ? (currentStepIdx === 4 ? 'Executing' : 'In Progress') : 'Pending',
+              time: s.executed_at ? new Date(s.executed_at).toLocaleTimeString() : (isPast ? 'Verified' : isCurrent ? 'Live' : 'Pending'),
+              status: (isPast ? 'completed' : isCurrent ? 'active' : 'pending') as 'completed' | 'active' | 'pending',
+            };
+          })
+        : defaultStepNames.map((name, idx) => {
+            const isPast = idx < currentStepIdx;
+            const isCurrent = idx === currentStepIdx;
+            return {
+              id: idx + 1,
+              label: name,
+              sublabel: isPast ? 'Verified' : isCurrent ? (currentStepIdx === 4 ? 'Executing' : 'In Progress') : 'Pending',
+              time: isPast ? `11:24:0${idx + 3}` : isCurrent ? 'Live' : 'Pending',
+              status: (isPast ? 'completed' : isCurrent ? 'active' : 'pending') as 'completed' | 'active' | 'pending',
+            };
+          });
 
-      const currentStepIdx = pipeline?.current_step_index ?? 4;
+      // Clean concise headline (avoid giant duplicate paragraph in title)
+      const rawCause = triage?.root_cause || (triage as any)?.title || fallback.rootCause || fallback.title;
+      let cleanHeadline = fallback.title;
+      if (rawCause) {
+        const firstSentence = rawCause.split(/[.\n—–]/)[0].trim();
+        if (firstSentence.length > 5 && firstSentence.length < 80) {
+          cleanHeadline = firstSentence;
+        }
+      }
 
       const updatedIncident: ActiveIncidentState = {
         incidentId,
-        title: triage?.root_cause ? `${service.toUpperCase()} — ${triage.root_cause}` : `${service.toUpperCase()} — ${fallback.title}`,
+        title: `${service.toUpperCase()} — ${cleanHeadline}`,
         service,
         severity,
         status: (triage?.status as any) || 'OPEN',
@@ -90,7 +122,7 @@ export default function App() {
         description: triage?.root_cause || fallback.description,
         confidence,
         sopMatched: triage?.sop_matched || fallback.sop,
-        duration: triage?.execution_time_seconds ? `${triage.execution_time_seconds}s` : fallback.duration,
+        duration,
         blastRadius: triage?.blast_radius || fallback.blastRadius,
         currentStepIndex: currentStepIdx,
         steps,
@@ -111,7 +143,7 @@ export default function App() {
           impact: {
             service,
             severity,
-            duration: postMortem.timeline?.detection_to_resolution_seconds ? `${postMortem.timeline.detection_to_resolution_seconds}s` : fallback.postMortem.impact.duration,
+            duration: postMortem.timeline?.detection_to_resolution_seconds ? `${postMortem.timeline.detection_to_resolution_seconds}s` : duration,
             usersAffected: postMortem.impact?.users_affected || fallback.postMortem.impact.usersAffected,
             availabilityImpact: postMortem.impact?.availability_impact || fallback.postMortem.impact.availabilityImpact,
           },
@@ -351,16 +383,18 @@ export default function App() {
             id="dashboard-grid"
             className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 max-w-[1920px] w-full mx-auto"
           >
-            {/* Left Column (Topology, Chaos Lab, Alert Stream 3A + AI Triage 3B) */}
-            <div className="lg:col-span-7 flex flex-col gap-3.5">
-              {/* Card 1: System Service Topology */}
+            {/* Top Full-Width Section: System Service Topology Mesh */}
+            <div className="col-span-12">
               <SystemTopology
                 activeIncident={activeIncident}
                 topologyData={topologyData || undefined}
                 isLoading={isLoadingInitial || isLoadingIncident}
                 onInvestigate={() => setIsDrawerOpen(true)}
               />
+            </div>
 
+            {/* Left Column (Chaos Lab, Alert Stream 3A + AI Triage 3B) */}
+            <div className="lg:col-span-7 flex flex-col gap-3.5">
               {/* Card 2: Chaos Lab */}
               <ChaosLab
                 currentExperimentId={currentExperimentId}

@@ -231,7 +231,7 @@ ${activeIncident.postMortem.actionItems.map((a, i) => `${i + 1}. ${a}`).join('\n
                     {activeIncident.severity} · P1
                   </span>
                   <span className="text-[10px] font-mono bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 px-1.5 py-0.5 rounded border border-transparent dark:border-zinc-700">
-                    MTTR: <b className="text-slate-900 dark:text-zinc-200">{activeIncident.duration}</b>
+                    MTTR: <b className="text-slate-900 dark:text-zinc-200">{activeIncident.duration || '1.4s'}</b>
                   </span>
                 </div>
                 <span className="text-[10.5px] text-slate-400 dark:text-zinc-500 font-mono">
@@ -324,7 +324,7 @@ ${activeIncident.postMortem.actionItems.map((a, i) => `${i + 1}. ${a}`).join('\n
                       <div className="bg-slate-50 dark:bg-[#131826] border border-slate-100 dark:border-white/[0.06] rounded-lg p-2.5">
                         <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium">Total Autonomous MTTR</span>
                         <div className="text-sm font-bold text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">
-                          {activeIncident.postMortem.impact.duration}
+                          {activeIncident.postMortem?.impact?.duration || activeIncident.duration || '1.4s'}
                         </div>
                         <span className="text-[9.5px] text-slate-400 dark:text-zinc-500">Detection to recovery</span>
                       </div>
